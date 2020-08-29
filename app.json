@@ -1,7 +1,7 @@
 {
-  "name": "Spotify-telegram-sync",
+  "name": "Spotify Telegram Sync",
   "description": "A bot that syncs your Spotify playlist with your Telegram channel, and updates your bio and the pinned message on your channel to your current playback.",
-  "app": "logo.png",
+  "logo": "logo.png",
   "env": {
     "SPOTIFY_CLIENT_ID": {
       "description": "Your Spotify app's client ID",
@@ -77,6 +77,6 @@
     }
   ],
   "scripts": {
-    "postdeploy": "pip install psycopg2;python create_db.py;",
+    "postdeploy": "pip install psycopg2;python create_db.py;"
   }
 }
