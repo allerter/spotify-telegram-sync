@@ -5,6 +5,7 @@ from get_song_file import download_track
 import tekore as tk
 from telethon.tl.functions.users import GetFullUserRequest
 from telethon.tl.functions.account import UpdateProfileRequest
+from telethon.tl.functions.channel import GetFullChannelRequest
 from telethon import errors, events, types, TelegramClient
 from telethon.sessions import StringSession
 import requests
@@ -133,7 +134,11 @@ async def update_bios():
     last_song.id = None
     pinned_message = await client.get_messages(constants.TELEGRAM_CHANNEL,
                                                ids=types.InputMessagePinned())
+    await asyncio.sleep(2)
+    telegram_channel = await client(GetFullChannelRequest(constants.TELEGRAM_CHANNEL))
+    channel_pic_counter = time.time()
     counter = 30
+
     while True:
         # get user bio and spotify playback
         counter_start = time.time()
@@ -143,9 +148,10 @@ async def update_bios():
             user_id = user_full.user.id
             user_first_name = user_full.user.first_name
 
-            telegram_channel_pic = \
-            await client.download_profile_photo(constants.TELEGRAM_CHANNEL, file=bytes)
-
+            if counter_start - channel_pic_counter > 3600:
+                telegram_channel_pic = \
+                    await client.download_profile_photo(telegram_channel, file=bytes)
+                channel_pic_counter = counter_start
         try:
             playback = spotify.playback_currently_playing(tracks_only=True)
         except tk.ServiceUnavailable:
@@ -390,6 +396,7 @@ async def check_playlist():
             # remove deleted songs from database
             database('delete', {'spotify_id': spotify_ids})
         await asyncio.sleep(300)
+
 
 loop = asyncio.get_event_loop()
 
