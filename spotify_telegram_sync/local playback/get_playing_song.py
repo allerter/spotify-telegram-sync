@@ -13,22 +13,32 @@ logging.basicConfig(level=logging.INFO,
                     )
 logger = logging.getLogger(__name__)
 
+extensions = ['.mp3', '.flac', '.ogg']
+
+SERVER_ADDRESS = 'example.com'  # IMPORTANT: No trailing "/".
+
 
 def get_playing_song():
-    pids = [sess.processId
+    pids = [sess.ProcessId
             for sess in AudioUtilities.GetAllSessions()
             if sess.State and sess.Process]
 
     for pid in pids:
         files_in_use = subprocess.check_output(f"handle.exe -p {pid}", shell=True)
-        path = [line[line.find(":\\") - 1: line.rfind('.mp3') + 4]
-                for line in files_in_use.decode().split('\n')
-                if '.mp3' in line]
+        path = None
+        for line in files_in_use.decode().split('\n'):
+            for extension in extensions:
+                if extension in line:
+                    path =  \
+                    line[line.find(":\\") - 1: line.rfind(extension) + len(extension)]
+                    break
+            if path is not None:
+                break
 
         if path:
-            song = mutagen.File(path[0], easy=True)
-            artist = song.get('artist')[0] if song.get('artist') else None
-            title = (song.get('title')[0].replace(' (48 kHz)', '')
+            song = mutagen.File(path, easy=True)
+            artist = song['artist'][0].split('/')[0] if song.get('artist') else None
+            title = (song['title'][0].replace(' (48 kHz)', '')
                      if song.get('title')
                      else None)
             return artist, title

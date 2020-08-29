@@ -284,7 +284,7 @@ async def update_bios():
             if counter >= 30:
                 # look for the default bio in user's saved messages
                 if saved_msg := await client.get_messages('me', search='default bio'):
-                    default_user_about = saved_msg[0].text.replace('default bio:\n', '')
+                    default_user_about = saved_msg[0].text.replace('default bio: ', '')
                 else:
                     default_user_about = ''
                 # update user bio to defaul value if it already isn't
