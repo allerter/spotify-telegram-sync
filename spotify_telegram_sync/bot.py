@@ -348,14 +348,15 @@ async def check_deleted():
 async def check_playlist():
     # get id, url and isrc of non-local songs
     while True:
+        # get id, url and isrc of non-local songs
         spotify_songs = []
-        tracks = spotify.playlist_items(constants.SPOTIFY_PLAYLIST_ID, as_tracks=True)
-        for item in tracks['items']:
-            if not item['is_local']:
-                song = item['track']
-                spotify_songs.append((song['id'],
-                                      song['external_urls']['spotify'],
-                                      song['external_ids']['isrc']))
+        tracks = spotify.playlist_items(constants.SPOTIFY_PLAYLIST_ID)
+        for item in tracks.items:
+            track = item.track
+            if not track.is_local and track.external_ids.get('isrc'):
+                spotify_songs.append((track.id,
+                                      track.external_urls['spotify'],
+                                      track.external_ids['isrc']))
 
         # get songs from db
         playlist = database('select')
