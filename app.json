@@ -1,0 +1,83 @@
+{
+  "name": "Spotify-telegram-sync",
+  "description": "A bot that syncs your Spotify playlist with your Telegram channel, and updates your bio and the pinned message on your channel to your current playback.",
+  "app": "logo.png",
+  "env": {
+    "SPOTIFY_CLIENT_ID": {
+      "description": "Your Spotify app's client ID",
+      "required": true
+    },
+    "SPOTIFY_CLIENT_SECRET": {
+      "description": "Your Spotify app's client secret",
+      "required": true
+    },
+    "SPOTIFY_REFRESHT_TOKEN": {
+      "description": "Your Spotify account's refresh token",
+      "required": true
+    },
+    "SPOTIFY_PLAYLIST_ID": {
+      "description": "Your Spotify playlist ID",
+      "required": true
+    },
+    "TELETHON_API_ID": {
+      "description": "Your Telegram app's API ID",
+      "required": true
+    },
+    "TELETHON_API_HASH": {
+      "description": "Your Telegram app's API hash",
+      "required": true
+    },
+    "TELETHON_SESSION_WORKER": {
+      "description": "Your first session string of your Telegram account",
+      "required": true
+    },
+    "TELETHON_SESSION_WEB": {
+      "description": "Your second session string of your Telegram account",
+      "required": true
+    },
+    "TELEGRAM_CHANNEL": {
+      "description": "The username of your Telegram channel",
+      "required": true
+    },
+    "TELEGRAM_CHANNEL_PIC": {
+      "description": "The picture of your Telegram channel. If UPDATE_BIOS is True and no song is playing on your Spotify account, this will be used as the picture for the pinned message.",
+      "required": true
+    },
+    "DEEZER_ARL_TOKEN": {
+      "description": "Your Deezer ARL token",
+      "required": true
+    },
+    "UPDATE_BIOS": {
+      "description": "Would you like to have your account bio and a pinned message on your channel to be updated to your current playback on Spotify?",
+      "value": "TRUE",
+      "required": true
+    },
+    "CHECK_CHANNEL_DELETED": {
+      "description": "Would you like the bot to check when you delete songs on your Telegram account, and remove them from your Spotify playlist as well?1",
+      "value": "FALSE",
+      "required": true
+    },
+    "CHECK_LOCAL_PLAYBACK": {
+      "description": "Would you like the bot to check for local playback updates?",
+      "value": "TRUE",
+      "required": true
+    },
+    "USING_WEB_SERVER": {
+      "description": "Will you be using a web server? TRUE if you're using the free plan on Heroku.",
+      "value": "TRUE",
+      "required": true
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql",
+      "options": {
+        "version": "12"
+      }
+    }
+  ],
+  "scripts": {
+    "postdeploy": "pip3 install psycopg2",
+    "postdeploy": "python3 create_db.py",
+  }
+}
