@@ -11,7 +11,7 @@
       "description": "Your Spotify app's client secret",
       "required": true
     },
-    "SPOTIFY_REFRESHT_TOKEN": {
+    "SPOTIFY_REFRESH_TOKEN": {
       "description": "Your Spotify account's refresh token",
       "required": true
     },
