@@ -39,10 +39,6 @@
       "description": "The username of your Telegram channel",
       "required": true
     },
-    "TELEGRAM_CHANNEL_PIC": {
-      "description": "The picture of your Telegram channel. If UPDATE_BIOS is True and no song is playing on your Spotify account, this will be used as the picture for the pinned message.",
-      "required": true
-    },
     "DEEZER_ARL_TOKEN": {
       "description": "Your Deezer ARL token",
       "required": true
