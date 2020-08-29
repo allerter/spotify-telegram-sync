@@ -1,3 +1,7 @@
+"""Script remixed from
+https://github.com/An0nimia/deezloader
+"""
+
 from constants import DEEZER_ARL_TOKEN
 
 from requests import Session, get
