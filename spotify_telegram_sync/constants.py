@@ -8,6 +8,7 @@ SPOTIFY_PLAYLIST_ID = os.environ.get('SPOTIFY_PLAYLIST_ID')
 TELEGRAM_CHANNEL = os.environ.get('TELEGRAM_CHANNEL')
 DATABASE_URL = os.environ.get('DATABASE_URL')
 SERVER_PORT = int(os.environ.get('PORT', 5000))
+SERVER_ADDRESS = 'https://' + os.environ.get('APP_NAME') + '.herokuapp.com'
 TELETHON_API_ID = os.environ.get('TELETHON_API_ID')
 TELETHON_API_HASH = os.environ.get('TELETHON_API_HASH')
 TELETHON_SESSION_WEB = os.environ.get('TELETHON_SESSION_WEB')

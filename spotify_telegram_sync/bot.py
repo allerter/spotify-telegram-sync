@@ -163,7 +163,7 @@ async def update_bios():
                 or constants.CHECK_LOCAL_PLAYBACK is False):
             local_playback = None
         else:
-            url = f'https://localhost:{constants.SERVER_PORT}/local_playback'
+            url = f'{constants.SERVER_ADDRESS}/local_playback'
             local_playback = requests.get(url).json()
             if counter_start - local_playback['time'] > 10:
                 local_playback = None

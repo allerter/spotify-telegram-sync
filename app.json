@@ -3,6 +3,10 @@
   "description": "A bot that syncs your Spotify playlist with your Telegram channel, and updates your bio and the pinned message on your channel to your current playback.",
   "logo": "logo.png",
   "env": {
+    "APP_NAME": {
+      "description": "The app name you entered above",
+      "required": true
+    },
     "SPOTIFY_CLIENT_ID": {
       "description": "Your Spotify app's client ID",
       "required": true
