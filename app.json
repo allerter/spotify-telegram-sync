@@ -73,6 +73,6 @@
     }
   ],
   "scripts": {
-    "postdeploy": "pip install psycopg2;python create_db.py;"
+    "postdeploy": "python3 setup_db.py;"
   }
 }
