@@ -82,6 +82,6 @@
     }
   ],
   "scripts": {
-    "postdeploy": "python3 setup_db.py;"
+    "postdeploy": "python3 setup/setup_db.py;"
   }
 }
