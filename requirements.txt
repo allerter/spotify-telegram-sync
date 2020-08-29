@@ -32,3 +32,4 @@ tqdm==4.48.0
 urllib3==1.25.10
 waitress==1.4.4
 Werkzeug==1.0.1
+cryptg

@@ -127,9 +127,9 @@ def get_user_about(current_song):
 
 
 async def update_bios():
-    last_song = namedtuple('last_song', ['artist', 'name'])
+    last_song = namedtuple('last_song', ['artist', 'name', 'id'])
     last_song.name = 'No Song Was Playing'
-    last_song.artist = 'No Song Was Playing'
+    last_song.artist = 'No Artist'
     last_song.id = None
     pinned_message = await client.get_messages(constants.TELEGRAM_CHANNEL,
                                                ids=types.InputMessagePinned())
@@ -143,13 +143,16 @@ async def update_bios():
             user_id = user_full.user.id
             user_first_name = user_full.user.first_name
 
+            telegram_channel_pic = \
+            await client.download_profile_photo(constants.TELEGRAM_CHANNEL, file=bytes)
+
         try:
             playback = spotify.playback_currently_playing(tracks_only=True)
         except tk.ServiceUnavailable:
             logger.log(logging.INFO, 'Spotify Unavilable')
             playback = None
         except tk.TooManyRequests as e:
-            # This except is probably unncessary with the use of RetryingSender
+            # TODO: use tk.RetryingSender with an async sender
             wait = e.response.headers['Retry-After']
             logger.log(logging.WARN, 'Spotify rate limit exceeded')
             await asyncio.sleep(wait + 1)
@@ -175,7 +178,7 @@ async def update_bios():
                 item_artist = playback.item.artists[0].name
                 item_name = playback.item.name
 
-            current_song = namedtuple('current_song', ['artist', 'name'])
+            current_song = namedtuple('current_song', ['artist', 'name', 'id'])
             current_song.artist = item_artist
             current_song.name = item_name
             current_song.id = playback.item.id if playback and playback.item else None
@@ -221,7 +224,7 @@ async def update_bios():
                         cover_art = requests.get(item_pic).content
                     current_song_url = playback.item.external_urls['spotify']
                 else:
-                    cover_art = constants.TELEGRAM_CHANNEL_PIC
+                    cover_art = telegram_channel_pic
                     current_song_url = '""'
 
                 # setting pinned_message text
@@ -293,7 +296,7 @@ async def update_bios():
                     await client.edit_message(constants.TELEGRAM_CHANNEL,
                                               pinned_message.id,
                                               text=msg_text, link_preview=False,
-                                              file=constants.TELEGRAM_CHANNEL_PIC)
+                                              file=telegram_channel_pic)
                 except errors.MessageNotModifiedError:
                     pass
                 except errors.FloodWaitError as e:

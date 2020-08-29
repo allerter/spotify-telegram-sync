@@ -53,7 +53,7 @@
       "required": true
     },
     "CHECK_CHANNEL_DELETED": {
-      "description": "Would you like the bot to check when you delete songs on your Telegram account, and remove them from your Spotify playlist as well?1",
+      "description": "Would you like the bot to check when you delete songs on your Telegram account, and remove them from your Spotify playlist as well?",
       "value": "FALSE",
       "required": true
     },
