@@ -1,7 +1,7 @@
 from constants import (SERVER_PORT, TELEGRAM_CHANNEL,
                        SPOTIFY_PLAYLIST_ID, TELETHON_API_ID,
                        TELETHON_API_HASH, TELETHON_SESSION_WEB,
-                       spotify)
+                       USING_WEB_SERVER, spotify)
 from get_song_file import download_track
 from database import database
 
@@ -83,8 +83,8 @@ def check_playlist_route():
     return "I'll check"
 
 
-@app.route('/get', methods=['GET'])
-def get():
+@app.route('/', methods=['GET'])
+def home_route():
     return 'OK'
 
 
@@ -106,5 +106,5 @@ def main():
     serve(app, host="0.0.0.0", port=SERVER_PORT)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__' or USING_WEB_SERVER:
     main()

@@ -14,7 +14,6 @@ Table of Contents
 > -   [How it Works](#how-it-works)
 > -   [Environment Variables](#environment-variables)
 
----
 
 Setup
 -----
@@ -89,7 +88,6 @@ running/modifying `setup_db.py` in the `setup` folder.
 Now you have all the requirements needed for the bot. Let's see how the
 bot works.
 
----
 
 How it Works
 ------------
@@ -180,7 +178,6 @@ run it. The script will check every 2 seconds, and will send a request
 to the server if it determines that you're playing a song, and logs
 failures in `failures.log` in the same directory of the script.
 
----
 
 Environment Variables
 ---------------------
