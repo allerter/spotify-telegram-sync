@@ -14,6 +14,8 @@ Table of Contents
 > -   [How it Works](#how-it-works)
 > -   [Environment Variables](#environment-variables)
 
+---
+
 Setup
 -----
 
@@ -47,18 +49,9 @@ Before continuing to setup, install the packages in the
 
     pip install -r requirements.txt
 
-<div class="note">
-
-<div class="title">
-
-Note
-
-</div>
-
-If you'd like to enable [Local Playback](#local-playback), also install
-the packages of `requirements.txt` in the `local playback` folder.
-
-</div>
+**Note**
+    If you'd like to enable [Local Playback](#local-playback), also install
+    the packages of `requirements.txt` in the `local playback` folder.
 
 Now run `spotify_refresh_token.py` in the `setup` folder get your
 refresh token. You can run it from the command line:
@@ -95,6 +88,8 @@ running/modifying `setup_db.py` in the `setup` folder.
 
 Now you have all the requirements needed for the bot. Let's see how the
 bot works.
+
+---
 
 How it Works
 ------------
@@ -184,6 +179,8 @@ variable in `get_playing_song.py` with the address of your server, and
 run it. The script will check every 2 seconds, and will send a request
 to the server if it determines that you're playing a song, and logs
 failures in `failures.log` in the same directory of the script.
+
+---
 
 Environment Variables
 ---------------------
