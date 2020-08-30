@@ -365,7 +365,7 @@ async def check_playlist():
         tracks = spotify.playlist_items(constants.SPOTIFY_PLAYLIST_ID)
         for item in tracks.items:
             track = item.track
-            if not track.is_local and track.external_ids.get('isrc'):
+            if track and not track.is_local and track.external_ids.get('isrc'):
                 spotify_songs.append((track.id,
                                       track.external_urls['spotify'],
                                       track.external_ids['isrc']))
