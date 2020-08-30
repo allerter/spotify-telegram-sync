@@ -5,7 +5,7 @@ A bot that syncs your Spotify playlist with your Telegram channels and
 updates your bio and a pinned message on your channel based on your
 current playback.
 
-[![image](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+[![image](https://www.herokucdn.com/deploy/button.svg)](https://www.heroku.com/deploy?template=https://github.com/Allerter/spotify-telegram-sync/tree/master)
 
 Table of Contents
 -----------------
