@@ -140,6 +140,9 @@ async def update_bios():
     last_song.id = None
     pinned_message = await client.get_messages(telegram_channel,
                                                ids=types.InputMessagePinned())
+    await asyncio.sleep(1)
+    telegram_channel_pic = \
+        await client.download_profile_photo(telegram_channel, file=bytes)
     one_hour_counter = time.time()
     counter = 30
 
@@ -288,7 +291,7 @@ async def update_bios():
             if counter >= 30:
                 # look for the default bio in user's saved messages
                 if saved_msg := await client.get_messages(telegram_me, search='default bio'):
-                    default_user_about = saved_msg[0].text.replace('default bio: ', '')
+                    default_user_about = saved_msg[0].text.replace('default bio:', '').strip()
                 else:
                     default_user_about = ''
                 # update user bio to defaul value if it already isn't
@@ -419,10 +422,7 @@ if constants.UPDATE_BIOS:
 if constants.CHECK_CHANNEL_DELETED:
     loop.create_task(check_deleted())
 
-if constants.USING_WEB_SERVER is False:
-    logging.getLogger("hachoir").setLevel(logging.CRITICAL)
-    loop.create_task(check_playlist())
-else:
+if constants.USING_WEB_SERVER:
     loop.create_task(keep_alive())
 # Use the following if you're separating the web server from the bot process
 # from within the script
@@ -431,5 +431,9 @@ else:
 #    import multiprocessing
 #    p = multiprocessing.Process(target=server.main())
 #    p.start()
+
+logging.getLogger("hachoir").setLevel(logging.CRITICAL)
+loop.create_task(check_playlist())
+
 
 client.run_until_disconnected()
