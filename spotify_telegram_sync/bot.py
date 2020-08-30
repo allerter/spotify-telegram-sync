@@ -5,7 +5,6 @@ from get_song_file import download_track
 import tekore as tk
 from telethon.tl.functions.users import GetFullUserRequest
 from telethon.tl.functions.account import UpdateProfileRequest
-from telethon.tl.functions.channel import GetFullChannelRequest
 from telethon import errors, events, types, TelegramClient
 from telethon.sessions import StringSession
 import requests
