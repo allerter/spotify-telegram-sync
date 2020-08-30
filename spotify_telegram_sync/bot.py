@@ -28,7 +28,11 @@ client.start()
 spotify = constants.spotify
 
 telegram_channel = client.loop.run_until_complete(
-    client(GetFullChannelRequest(constants.TELEGRAM_CHANNEL))
+    client.get_input_entity(constants.TELEGRAM_CHANNEL)
+)
+time.sleep(1)
+telegram_me = client.loop.run_until_complete(
+    client.get_input_entity('me')
 )
 
 
@@ -144,7 +148,7 @@ async def update_bios():
         # get user bio and spotify playback
         counter_start = time.time()
         if counter >= 30:
-            user_full = await client(GetFullUserRequest('me'))
+            user_full = await client(GetFullUserRequest(telegram_me))
             user_about = user_full.about
             user_id = user_full.user.id
             user_first_name = user_full.user.first_name
@@ -284,7 +288,7 @@ async def update_bios():
         else:
             if counter >= 30:
                 # look for the default bio in user's saved messages
-                if saved_msg := await client.get_messages('me', search='default bio'):
+                if saved_msg := await client.get_messages(telegram_me, search='default bio'):
                     default_user_about = saved_msg[0].text.replace('default bio: ', '')
                 else:
                     default_user_about = ''
