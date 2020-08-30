@@ -53,8 +53,11 @@ def check_playlist():
         # download each song and send it to the Telegram channel
         for song in to_be_added:
             file = download_track(isrc=song[2], output='file')[0]
+            uploaded_file = client.loop.run_until_complete(
+                client.upload_file(file, part_size_kb=512)
+            )
             msg = client.loop.run_until_complete(
-                client.send_file(TELEGRAM_CHANNEL, file))
+                client.send_file(TELEGRAM_CHANNEL, uploaded_file))
             upload_to_db_songs.append((song[0], str(msg.id)))
 
         # add new songs to database

@@ -141,8 +141,8 @@ async def update_bios():
     pinned_message = await client.get_messages(telegram_channel,
                                                ids=types.InputMessagePinned())
     await asyncio.sleep(1)
-    telegram_channel_pic = \
-        await client.download_profile_photo(telegram_channel, file=bytes)
+    pic = await client.download_profile_photo(telegram_channel, file=bytes)
+    telegram_channel_pic = await client.upload_file(pic)
     one_hour_counter = time.time()
     counter = 30
 
@@ -156,8 +156,8 @@ async def update_bios():
             user_first_name = user_full.user.first_name
 
             if counter_start - one_hour_counter >= 3600:
-                telegram_channel_pic = \
-                    await client.download_profile_photo(telegram_channel, file=bytes)
+                pic = await client.download_profile_photo(telegram_channel, file=bytes)
+                telegram_channel_pic = await client.upload_file(pic)
                 one_hour_counter = counter_start
         try:
             playback = spotify.playback_currently_playing(tracks_only=True)
@@ -384,7 +384,8 @@ async def check_playlist():
             # download each song and send it to the Telegram channel
             for song in to_be_added:
                 file = download_track(isrc=song[2], output='file')[0]
-                msg = await client.send_file(telegram_channel, file)
+                uploaded_file = await client.upload_file(file, part_size_kb=512)
+                msg = await client.send_file(telegram_channel, uploaded_file)
                 upload_to_db_songs.append((song[0], str(msg.id)))
 
             # add new songs to database
