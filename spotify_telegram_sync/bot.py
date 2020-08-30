@@ -132,10 +132,10 @@ async def update_bios():
     last_song.name = 'No Song Was Playing'
     last_song.artist = 'No Artist'
     last_song.id = None
-    pinned_message = await client.get_messages(constants.TELEGRAM_CHANNEL,
+    telegram_channel = await client(GetFullChannelRequest(constants.TELEGRAM_CHANNEL))
+    pinned_message = await client.get_messages(telegram_channel,
                                                ids=types.InputMessagePinned())
     await asyncio.sleep(2)
-    telegram_channel = await client(GetFullChannelRequest(constants.TELEGRAM_CHANNEL))
     channel_pic_counter = time.time()
     counter = 30
 
@@ -258,7 +258,7 @@ async def update_bios():
                 # update pinnes message
                 try:
                     if pinned_message:
-                        await client.edit_message(constants.TELEGRAM_CHANNEL,
+                        await client.edit_message(telegram_channel,
                                                   pinned_message.id,
                                                   text=msg_text, link_preview=False,
                                                   file=cover_art if cover_art else None)
@@ -299,7 +299,7 @@ async def update_bios():
                             + " isn't listening to anything right now."
                             )
                 try:
-                    await client.edit_message(constants.TELEGRAM_CHANNEL,
+                    await client.edit_message(telegram_channel,
                                               pinned_message.id,
                                               text=msg_text, link_preview=False,
                                               file=telegram_channel_pic)
@@ -322,7 +322,7 @@ async def check_deleted():
     old_id = 1
     while True:
         deleted = []
-        async for event in client.iter_admin_log(constants.TELEGRAM_CHANNEL,
+        async for event in client.iter_admin_log(telegram_channel,
                                                  min_id=old_id):
             # event should be: deleted, audio, and not a voice audio
             if event.deleted_message:
@@ -378,7 +378,7 @@ async def check_playlist():
             # download each song and send it to the Telegram channel
             for song in to_be_added:
                 file = download_track(isrc=song[2], output='file')[0]
-                msg = await client.send_file(constants.TELEGRAM_CHANNEL, file)
+                msg = await client.send_file(telegram_channel, file)
                 upload_to_db_songs.append((song[0], str(msg.id)))
 
             # add new songs to database
@@ -391,7 +391,7 @@ async def check_playlist():
 
             # get telegram ids of deleted songs and delete them
             telegram_ids = [x[1] for x in playlist if x[0] in spotify_ids]
-            await client.delete_messages(constants.TELEGRAM_CHANNEL, telegram_ids)
+            await client.delete_messages(telegram_channel, telegram_ids)
 
             # remove deleted songs from database
             database('delete', {'spotify_id': spotify_ids})
