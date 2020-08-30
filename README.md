@@ -191,58 +191,58 @@ Environment Variables
 You need to set the following variables in your environment to make the
 bot work:
 
--   DATABASE\_URL (automatically set in Heroku)  
+-   **DATABASE\_URL** (automatically set in Heroku)  
     The URL of your database
 
--   SERVER\_PORT (automatically set in Heroku)  
+-   **SERVER\_PORT** (automatically set in Heroku)  
     The port of your web server if you're using one
 
--   SPOTIFY\_CLIENT\_ID  
+-   **SPOTIFY\_CLIENT\_ID**
     Your Spotify app's client ID
 
--   SPOTIFY\_CLIENT\_SECRET  
+-   **SPOTIFY\_CLIENT\_SECRET**
     Your Spotify app's client secret
 
--   SPOTIFY\_REFRESHT\_TOKEN  
+-   **SPOTIFY\_REFRESHT\_TOKEN**
     Your Spotify refresh token
 
--   SPOTIFY\_PLAYLIST\_ID  
+-   **SPOTIFY\_PLAYLIST\_ID**  
     The ID of your playlist on Spotify
 
--   TELETHON\_API\_ID  
+-   **TELETHON\_API\_ID**  
     The API ID of your Telegram app
 
--   TELETHON\_API\_HASH  
+-   **TELETHON\_API\_HASH**  
     The API Hash of your Telegram app
 
--   TELETHON\_SESSION\_WORKER  
+-   **TELETHON\_SESSION\_WORKER**  
     The first session string of your Telegram account
 
--   TELETHON\_SESSION\_WEB  
+-   **TELETHON\_SESSION\_WEB**  
     The second session string of your Telegram account
 
--   TELEGRAM\_CHANNEL  
+-   **TELEGRAM\_CHANNEL**  
     The username of your Telegram channel
 
--   DEEZER\_ARL\_TOKEN  
+-   **DEEZER\_ARL\_TOKEN** 
     Your Deezer ARL token
 
--   USING\_WEB\_SERVER  
+-   **USING\_WEB\_SERVER**  
     Whether you will be using a web server. *TRUE* for Heroku.
 
--   APP\_NAME  
+-   **APP\_NAME**  
     The name of your app on Heroku. If you don't want to deploy the bot
     on Heroku, manually change the `SERVER_ADDRESS` variable in
     `constants.py` to the address of your server.
 
--   UPDATE\_BIOS  
+-   **UPDATE\_BIOS**  
     Would you like to have your account bio and a pinned message on your
     channel to be updated to your current playback on Spotify?"
 
--   CHECK\_CHANNEL\_DELETED  
+-   **CHECK\_CHANNEL\_DELETED**  
     Would you like the bot to check when you delete songs on your
     Telegram account, and remove them from your Spotify playlist as
     well?
 
--   CHECK\_LOCAL\_PLAYBACK":  
+-   **CHECK\_LOCAL\_PLAYBACK**  
     Would you like the bot to check for local playback updates?

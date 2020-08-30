@@ -23,10 +23,13 @@ logger = logging.getLogger(__name__)
 
 client = TelegramClient(StringSession(constants.TELETHON_SESSION_WORKER),
                         constants.TELETHON_API_ID, constants.TELETHON_API_HASH)
-
 client.start()
 
 spotify = constants.spotify
+
+telegram_channel = client.loop.run_until_complete(
+    client(GetFullChannelRequest(constants.TELEGRAM_CHANNEL))
+)
 
 
 def clean_str(s):
@@ -74,7 +77,7 @@ def search_deezer(artist, title):
     return match
 
 
-@client.on(events.NewMessage(chats=(constants.TELEGRAM_CHANNEL)))
+@client.on(events.NewMessage(chats=(telegram_channel)))
 async def new_message_handler(event):
     """ checks for songs in new messages to telegram channel,
     and adds them to spotify playlist.
@@ -132,11 +135,9 @@ async def update_bios():
     last_song.name = 'No Song Was Playing'
     last_song.artist = 'No Artist'
     last_song.id = None
-    telegram_channel = await client(GetFullChannelRequest(constants.TELEGRAM_CHANNEL))
     pinned_message = await client.get_messages(telegram_channel,
                                                ids=types.InputMessagePinned())
-    await asyncio.sleep(2)
-    channel_pic_counter = time.time()
+    one_hour_counter = time.time()
     counter = 30
 
     while True:
@@ -148,10 +149,10 @@ async def update_bios():
             user_id = user_full.user.id
             user_first_name = user_full.user.first_name
 
-            if counter_start - channel_pic_counter > 3600:
+            if counter_start - one_hour_counter >= 3600:
                 telegram_channel_pic = \
                     await client.download_profile_photo(telegram_channel, file=bytes)
-                channel_pic_counter = counter_start
+                one_hour_counter = counter_start
         try:
             playback = spotify.playback_currently_playing(tracks_only=True)
         except tk.ServiceUnavailable:
@@ -204,7 +205,7 @@ async def update_bios():
                     and item_name != 'Unknown Title'
                     and (matches := search_spotify(item_artist, item_name))
                     and matches[0].external_ids.get('isrc')
-                ):
+                    ):
                     isrc = matches[0].external_ids['isrc']
                     cover_art = requests.get(
                         f'https://api.deezer.com/track/isrc:{isrc}')
@@ -352,7 +353,6 @@ async def check_deleted():
 
 
 async def check_playlist():
-    # get id, url and isrc of non-local songs
     while True:
         # get id, url and isrc of non-local songs
         spotify_songs = []
@@ -398,6 +398,16 @@ async def check_playlist():
         await asyncio.sleep(300)
 
 
+async def keep_alive():
+    """Keep Heroku app from going to sleep
+    by sending HTTP requests to web server
+
+    """
+    while True:
+        requests.get(constants.SERVER_ADDRESS)
+        await asyncio.sleep(1740)
+
+
 loop = asyncio.get_event_loop()
 
 if constants.UPDATE_BIOS:
@@ -409,6 +419,8 @@ if constants.CHECK_CHANNEL_DELETED:
 if constants.USING_WEB_SERVER is False:
     logging.getLogger("hachoir").setLevel(logging.CRITICAL)
     loop.create_task(check_playlist())
+else:
+    loop.create_task(keep_alive())
 # Use the following if you're separating the web server from the bot process
 # from within the script
 # else:
