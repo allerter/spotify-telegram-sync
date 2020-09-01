@@ -198,6 +198,8 @@ async def update_bios():
 
             # if current track is same as the last track, there's no need to update
             if (
+                (playback and playback.item.is_local and current_song.name != last_song.name)
+                or
                 (playback and current_song.id != last_song.id)
                 or
                 (local_playback and current_song.name != last_song.name)
