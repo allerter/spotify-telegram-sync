@@ -180,6 +180,24 @@ to the server if it determines that you're playing a song, and logs
 failures in `failures.log` in the same directory of the script.
 
 
+#### Web server
+The bot also has a `server.py` script which runs a *Flask* server. This is used
+to keep Heroku apps that use the free plan from going to sleep. To do this, the bot
+sends an HTTP request to the server every 29 minutes. The server also has a 
+`/check_playlist` path that will sync the Spotify playlist with the Telegram channel
+when it receives a GET request. Besides the two usages mentioned, the server is also
+used for getting and setting local playback which is explained above in [Local Playback](#local-playback).
+
+
+Deploying to Heroku
+-------------------
+Using the *Deploy to Heroku* button above is the easiest way to set the bot up. After clicking on the link
+you will enter the value of the variables mentioned below, and if all the values are correct the bot will
+set itself up. After the deployment succeeds, all you need to to is go to the *Resource* and turn the 
+*worker* process on by clicking on its button on the right. After that the bot will be all set up. If you
+need to change any of the environment variables, you can do so using the *Config Vars* section in the
+*Settings* tab.
+
 Environment Variables
 ---------------------
 
