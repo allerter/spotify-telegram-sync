@@ -159,7 +159,11 @@ async def update_bios():
 
             if counter_start - one_hour_counter >= 3600:
                 pic = await client.download_profile_photo(telegram_channel, file=bytes)
-                telegram_channel_pic = await client.upload_file(pic)
+                telegram_channel_pic = (await client.upload_file(pic)
+                                        if pic is not None else constants.DEFAULT_PIC)
+                await asyncio.sleep(1)
+                pinned_message = await client.get_messages(telegram_channel,
+                                                           ids=types.InputMessagePinned())
                 one_hour_counter = counter_start
         try:
             playback = spotify.playback_currently_playing(tracks_only=True)
@@ -172,7 +176,10 @@ async def update_bios():
             logger.log(logging.WARN, 'Spotify rate limit exceeded')
             await asyncio.sleep(wait + 1)
             counter += wait + 1
-            continue
+            playback = None
+        except tk.ServerError as e:
+            logger.log(logging.INFO, e)
+            playback = None
 
         if ((playback and playback.is_playing and playback.item)
                 or constants.CHECK_LOCAL_PLAYBACK is False):
