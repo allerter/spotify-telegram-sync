@@ -28,4 +28,4 @@ if USING_WEB_SERVER is False:
 cred = tk.RefreshingCredentials(SPOTIFY_CLIENT_ID,
                                 SPOTIFY_CLIENT_SECRET)
 token = cred.refresh_user_token(SPOTIFY_REFRESH_TOKEN)
-spotify = tk.Spotify(token)
+spotify = tk.Spotify(token, sender=tk.RetryingSender())

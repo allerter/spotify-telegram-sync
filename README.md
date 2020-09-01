@@ -13,6 +13,7 @@ Table of Contents
 > -   [Setup](#setup)
 > -   [How it Works](#how-it-works)
 > -   [Environment Variables](#environment-variables)
+> -   [Deploying to Heroku](#deploying-to-heroku)
 
 
 Setup
