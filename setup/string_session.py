@@ -11,4 +11,6 @@ with TelegramClient(StringSession(), API_ID, API_HASH) as client:
     saved_messages_template = f"""
 <code>STRING_SESSION</code>: <code>{session_string}</code>
 ⚠️ <i>Please be carefull when passing this value to third parties</i>"""
-    client.send_message("me", saved_messages_template, parse_mode="html")
+    client.loop.run_until_complete(
+        send_message("me", saved_messages_template, parse_mode="html")
+    )
