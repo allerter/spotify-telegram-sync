@@ -142,7 +142,9 @@ async def update_bios():
                                                ids=types.InputMessagePinned())
     await asyncio.sleep(1)
     pic = await client.download_profile_photo(telegram_channel, file=bytes)
-    telegram_channel_pic = await client.upload_file(pic)
+    telegram_channel_pic = (await client.upload_file(pic)
+                            if pic is not None else constants.DEFAULT_PIC)
+
     one_hour_counter = time.time()
     counter = 30
 

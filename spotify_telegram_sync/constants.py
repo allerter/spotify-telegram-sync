@@ -24,6 +24,9 @@ USING_WEB_SERVER = (True if os.environ.get('USING_WEB_SERVER', 'true').lower()
 if USING_WEB_SERVER is False:
     CHECK_LOCAL_PLAYBACK = False
 
+# This used to be the photo of the pinned message if the channel has no pic.
+DEFAULT_PIC = 'https://raw.githubusercontent.com/Allerter/spotify-telegram-sync/master/logo.png'
+
 # spotify client
 cred = tk.RefreshingCredentials(SPOTIFY_CLIENT_ID,
                                 SPOTIFY_CLIENT_SECRET)
