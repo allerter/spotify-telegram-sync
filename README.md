@@ -36,15 +36,9 @@ create an app by clicking on *CREATE AN APP*. After creating the app,
 you'll be redirected to another page. In this page (the app's page), you
 will see *Client ID* on the left hand side and *SHOW CLIENT SECRET*.
 Copy the value of those two and save them somewhere. Now all you need
-from Spotify is your refresh token. Now copy the link below and replace
-*CLIENT\_ID* with the one you saved before.
-<https://accounts.spotify.com/authorize?client_id=CLIENT_ID&response_type=code&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback&scope=user-read-playback-state%20user-read-currently-playing%20playlist-read-collaborative%20playlist-modify-public%20playlist-read-private%20playlist-modify-private>
+from Spotify is your refresh token. 
 
-Click on the link now and click *Agree*. After that you'll be redirected
-to another page. Copy the whole link of that page (it's something like
-<https://example.com/callback?code=>...).
-
-Before continuing to setup, install the packages in the
+Before continuing, install the packages in the
 `requirements.txt` file. To do this run:
 
     pip install -r requirements.txt
@@ -54,7 +48,10 @@ Before continuing to setup, install the packages in the
     the packages of `requirements.txt` in the `local playback` folder.
 
 Now run `spotify_refresh_token.py` in the `setup` folder get your
-refresh token. You can run it from the command line:
+refresh token. The script will ask for your Spotify app ID, app secret, and
+then the link of the webpage after you click *Agree* (the link will be
+someting like `https://example.com/callback?code=...`) You can run the script
+from the command line:
 
     python spotify_refresh_token.py
 

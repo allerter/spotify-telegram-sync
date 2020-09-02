@@ -135,6 +135,7 @@ def get_user_about(current_song):
 
 async def update_bios():
     last_song = namedtuple('last_song', ['artist', 'name', 'id'])
+    current_song = namedtuple('current_song', ['artist', 'name', 'id'])
     last_song.name = 'No Song Was Playing'
     last_song.artist = 'No Artist'
     last_song.id = None
@@ -200,7 +201,6 @@ async def update_bios():
                 item_artist = playback.item.artists[0].name
                 item_name = playback.item.name
 
-            current_song = namedtuple('current_song', ['artist', 'name', 'id'])
             current_song.artist = item_artist
             current_song.name = item_name
             current_song.id = playback.item.id if playback and playback.item else None
