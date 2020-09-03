@@ -178,8 +178,9 @@ async def update_bios():
             await asyncio.sleep(wait + 1)
             counter += wait + 1
             playback = None
-        except tk.ServerError as e:
-            logger.log(logging.INFO, e)
+        except tk.HTTPError as e:
+            error = f'HTTPError caught: {str(e)}'
+            logger.log(logging.INFO, error)
             playback = None
 
         if ((playback and playback.is_playing and playback.item)
@@ -447,5 +448,5 @@ if constants.USING_WEB_SERVER:
 logging.getLogger("hachoir").setLevel(logging.CRITICAL)
 loop.create_task(check_playlist())
 
-
-client.run_until_disconnected()
+while True:
+    client.run_until_disconnected()
