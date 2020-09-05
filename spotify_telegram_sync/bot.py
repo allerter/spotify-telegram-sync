@@ -17,7 +17,7 @@ import time
 import re
 # initiate  telegram client
 logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                    format='%(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 client = TelegramClient(StringSession(constants.TELETHON_SESSION_WORKER),
@@ -135,7 +135,6 @@ def get_user_about(current_song):
 
 async def update_bios():
     last_song = namedtuple('last_song', ['artist', 'name', 'id'])
-    current_song = namedtuple('current_song', ['artist', 'name', 'id'])
     last_song.name = 'No Song Was Playing'
     last_song.artist = 'No Artist'
     last_song.id = None
@@ -182,7 +181,6 @@ async def update_bios():
             error = f'HTTPError caught: {str(e)}'
             logger.log(logging.INFO, error)
             playback = None
-
         if ((playback and playback.is_playing and playback.item)
                 or constants.CHECK_LOCAL_PLAYBACK is False):
             local_playback = None
@@ -191,7 +189,6 @@ async def update_bios():
             local_playback = requests.get(url).json()
             if counter_start - local_playback['time'] > 10:
                 local_playback = None
-
         # check if a track is playing
         if (playback and playback.is_playing and playback.item) or local_playback:
 
@@ -202,10 +199,10 @@ async def update_bios():
                 item_artist = playback.item.artists[0].name
                 item_name = playback.item.name
 
-            current_song.artist = item_artist
-            current_song.name = item_name
+            current_song = namedtuple('current_song', ['artist', 'name', 'id'])
+            current_song.artist = item_artist if item_artist else 'Unknown Artist'
+            current_song.name = item_name if item_name else 'Unknown Title'
             current_song.id = playback.item.id if playback and playback.item else None
-
             # if current track is same as the last track, there's no need to update
             if (
                 (playback and playback.item.is_local and current_song.name != last_song.name)
@@ -215,15 +212,12 @@ async def update_bios():
                 (local_playback and current_song.name != last_song.name)
             ):
 
-                item_name = item_name if item_name else 'Unknown Title'
-                item_artist = item_artist if item_artist else 'Unknown Artist'
-
                 if (local_playback
-                    and item_artist != 'Unknown Artist'
-                    and item_name != 'Unknown Title'
+                    and current_song.artist != 'Unknown Artist'
+                    and current_song.name != 'Unknown Title'
                     and (matches := search_spotify(item_artist, item_name))
                     and matches[0].external_ids.get('isrc')
-                    ):
+                ):
                     isrc = matches[0].external_ids['isrc']
                     cover_art = requests.get(
                         f'https://api.deezer.com/track/isrc:{isrc}')
@@ -445,7 +439,7 @@ if constants.USING_WEB_SERVER:
 #    p = multiprocessing.Process(target=server.main())
 #    p.start()
 
-logging.getLogger("hachoir").setLevel(logging.CRITICAL)
+logging.getLogger("hachoir").setLevel(logging.ERROR)
 loop.create_task(check_playlist())
 
 while True:

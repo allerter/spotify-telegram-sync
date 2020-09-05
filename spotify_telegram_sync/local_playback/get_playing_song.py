@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 extensions = ['.mp3', '.flac', '.ogg']
 
-SERVER_ADDRESS = 'example.com'  # IMPORTANT: No trailing "/".
+SERVER_ADDRESS = 'https://spotify-telegram-sync.herokuapp.com'  # IMPORTANT: No trailing "/".
 
 
 def get_playing_song():
@@ -49,6 +49,7 @@ def main():
     while True:
         artist, title = get_playing_song()
         if artist and title:
+            print(artist, title)
             try:
                 requests.post(f'{SERVER_ADDRESS}/local_playback',
                               data={'artist': artist, 'title': title})
