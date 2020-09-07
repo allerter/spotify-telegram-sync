@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 extensions = ['.mp3', '.flac', '.ogg']
 
-SERVER_ADDRESS = 'https://spotify-telegram-sync.herokuapp.com'  # IMPORTANT: No trailing "/".
+SERVER_ADDRESS = 'https://example.com'  # IMPORTANT: No trailing "/".
 
 
 def get_playing_song():

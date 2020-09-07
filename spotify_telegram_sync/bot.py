@@ -181,6 +181,11 @@ async def update_bios():
             error = f'HTTPError caught: {str(e)}'
             logger.log(logging.INFO, error)
             playback = None
+        except ConnectionError as e:
+            error = f'ConnectionError caught: {str(e)}'
+            logger.log(logging.INFO, error)
+            playback = None
+
         if ((playback and playback.is_playing and playback.item)
                 or constants.CHECK_LOCAL_PLAYBACK is False):
             local_playback = None
