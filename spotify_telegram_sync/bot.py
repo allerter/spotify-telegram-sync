@@ -181,8 +181,8 @@ async def update_bios():
             error = f'HTTPError caught: {str(e)}'
             logger.log(logging.INFO, error)
             playback = None
-        except ConnectionError as e:
-            error = f'ConnectionError caught: {str(e)}'
+        except Exception as e:
+            error = f'Exception caught: {e}'
             logger.log(logging.INFO, error)
             playback = None
 
