@@ -22,8 +22,7 @@ Setup
 To sync your Spotify playlist with your Telegram channel you will need:
 
 -   **Spotify**: client ID, client secret, refresh token
--   **Telegram**: channel username, API ID, API hash, two string
-    sessions
+-   **Telegram**: channel username, API ID, API hash and a string session
 -   **Deezer**: ARL token
 -   **Database**: a table named *playlist* with two columns:
     *spotify\_id*, *telegram\_id*
@@ -59,12 +58,11 @@ from the command line:
 
 Go to [my.telegram.org](https://my.telegram.org/). After logging in, go
 to *API development tools*, and create an app. After creating the app,
-copy *App api\_id* and *App api\_hash*. Next up is getting those two
-Telegram sessions.
+copy *App api\_id* and *App api\_hash*. Next up is getting a Telegram
+account session in string format.
 
-Now run `string_session.py` in the `setup` folder twice to get two
-string sessions (one for the web process, and one for the worker
-process). You can run the script from the command line:
+Now run `string_session.py` in the `setup` folder to get the
+string session. You can run the script from the command line:
 
     python string_session.py
 
@@ -225,11 +223,8 @@ bot work:
 -   **TELETHON\_API\_HASH**  
     The API Hash of your Telegram app
 
--   **TELETHON\_SESSION\_WORKER**  
-    The first session string of your Telegram account
-
--   **TELETHON\_SESSION\_WEB**  
-    The second session string of your Telegram account
+-   **TELEGRAM\_SESSION**  
+    The string session you generated using string_session.py
 
 -   **TELEGRAM\_CHANNEL**  
     The username of your Telegram channel

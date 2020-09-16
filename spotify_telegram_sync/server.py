@@ -1,13 +1,15 @@
-from constants import (SERVER_PORT, TELEGRAM_CHANNEL,
-                       SPOTIFY_PLAYLIST_ID, TELETHON_API_ID,
-                       TELETHON_API_HASH, TELETHON_SESSION_WEB,
-                       USING_WEB_SERVER, spotify)
+from constants import (SERVER_PORT,
+                       USING_WEB_SERVER)
+# from constants import (TELETHON_API_ID,
+#                      TELETHON_API_HASH,
+#                      TELETHON_SESSION_WEB,
+#                      spotify,
+#                      TELEGRAM_CHANNEL)
 from get_song_file import download_track
 from database import database
-
 from waitress import serve
-from telethon import TelegramClient
-from telethon.sessions import StringSession
+# from telethon import TelegramClient
+# from telethon.sessions import StringSession
 from flask import Flask, request
 
 from threading import Thread
@@ -20,14 +22,19 @@ app = Flask(__name__)
 playback = {'artist': '', 'title': '', 'time': time()}
 
 # telegram client
-client = TelegramClient(StringSession(TELETHON_SESSION_WEB),
-                        TELETHON_API_ID, TELETHON_API_HASH)
+# client = TelegramClient(StringSession(TELEGRAM_SESSION_TWO),
+#                        TELETHON_API_ID, TELETHON_API_HASH)
 
 # disable hachoir warnings
 logging.getLogger("hachoir").setLevel(logging.CRITICAL)
 
 
 def check_playlist():
+    # You could have the playlist checked by
+    # sending requests to the web server at example.com/check_playlist
+    # but that would require another Telegram string session.
+    return
+
     # get id, url and isrc of non-local songs
     spotify_songs = []
     tracks = spotify.playlist_items(SPOTIFY_PLAYLIST_ID)

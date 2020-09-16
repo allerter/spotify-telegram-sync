@@ -418,7 +418,7 @@ async def check_playlist():
 
 async def keep_alive():
     """Keep Heroku app from going to sleep
-    by sending HTTP requests to web server
+    by sending GET requests to the web server
 
     """
     while True:

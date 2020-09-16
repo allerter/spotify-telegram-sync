@@ -36,12 +36,8 @@
       "description": "Your Telegram app's API hash",
       "required": true
     },
-    "TELETHON_SESSION_WORKER": {
-      "description": "Your first session string of your Telegram account",
-      "required": true
-    },
-    "TELETHON_SESSION_WEB": {
-      "description": "Your second session string of your Telegram account",
+    "TELEGRAM_SESSION": {
+      "description": "The string session you generated using string_session.py",
       "required": true
     },
     "TELEGRAM_CHANNEL": {
