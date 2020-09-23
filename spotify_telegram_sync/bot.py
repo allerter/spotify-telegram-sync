@@ -154,6 +154,8 @@ async def update_bios():
         if counter >= 30:
             user_full = await client(GetFullUserRequest(telegram_me))
             user_about = user_full.about
+            if user_about is None:
+                user_about = ''
             user_id = user_full.user.id
             user_first_name = user_full.user.first_name
 
