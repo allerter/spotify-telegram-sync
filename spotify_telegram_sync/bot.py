@@ -10,6 +10,7 @@ from telethon.sessions import StringSession
 import requests
 import asyncio
 
+from io import BytesIO
 from string import punctuation
 from collections import namedtuple
 import logging
@@ -146,6 +147,8 @@ async def update_bios():
                             if pic is not None else constants.DEFAULT_PIC)
 
     one_hour_counter = time.time()
+    default_sleep_time = 5
+    sleep_time = default_sleep_time
     counter = 30
 
     while True:
@@ -164,8 +167,10 @@ async def update_bios():
                 telegram_channel_pic = (await client.upload_file(pic)
                                         if pic is not None else constants.DEFAULT_PIC)
                 await asyncio.sleep(1)
-                pinned_message = await client.get_messages(telegram_channel,
-                                                           ids=types.InputMessagePinned())
+                pinned_message = await client.get_messages(
+                    telegram_channel,
+                    ids=types.InputMessagePinned()
+                )
                 one_hour_counter = counter_start
         try:
             playback = spotify.playback_currently_playing(tracks_only=True)
@@ -173,7 +178,6 @@ async def update_bios():
             logger.log(logging.INFO, 'Spotify Unavilable')
             playback = None
         except tk.TooManyRequests as e:
-            # TODO: use tk.RetryingSender with an async sender
             wait = e.response.headers['Retry-After']
             logger.log(logging.WARN, 'Spotify rate limit exceeded')
             await asyncio.sleep(wait + 1)
@@ -198,6 +202,8 @@ async def update_bios():
                 local_playback = None
         # check if a track is playing
         if (playback and playback.is_playing and playback.item) or local_playback:
+            # Reset to default since user is playing and might change the track soon
+            sleep_time = default_sleep_time
 
             if local_playback:
                 item_artist = local_playback['artist']
@@ -212,19 +218,17 @@ async def update_bios():
             current_song.id = playback.item.id if playback and playback.item else None
             # if current track is same as the last track, there's no need to update
             if (
-                (playback and playback.item.is_local and current_song.name != last_song.name)
-                or
-                (playback and current_song.id != last_song.id)
-                or
-                (local_playback and current_song.name != last_song.name)
+                    (playback and playback.item.is_local
+                        and current_song.name != last_song.name)
+                    or (playback and current_song.id != last_song.id)
+                    or (local_playback and current_song.name != last_song.name)
             ):
 
                 if (local_playback
                     and current_song.artist != 'Unknown Artist'
                     and current_song.name != 'Unknown Title'
                     and (matches := search_spotify(item_artist, item_name))
-                    and matches[0].external_ids.get('isrc')
-                ):
+                        and matches[0].external_ids.get('isrc')):
                     isrc = matches[0].external_ids['isrc']
                     cover_art = requests.get(
                         f'https://api.deezer.com/track/isrc:{isrc}')
@@ -275,7 +279,7 @@ async def update_bios():
                         counter -= e.seconds
                     counter_start = time.time()
 
-                # update pinnes message
+                # update pinned message
                 try:
                     if pinned_message:
                         await client.edit_message(telegram_channel,
@@ -303,8 +307,13 @@ async def update_bios():
         else:
             if counter >= 30:
                 # look for the default bio in user's saved messages
-                if saved_msg := await client.get_messages(telegram_me, search='default bio'):
-                    default_user_about = saved_msg[0].text.replace('default bio:', '').strip()
+                if saved_msg := await client.get_messages(telegram_me,
+                                                          search='default bio'):
+                    default_user_about = (
+                        saved_msg[0].text
+                        .replace('default bio:', '')
+                        .strip()
+                    )
                 else:
                     default_user_about = ''
                 # update user bio to defaul value if it already isn't
@@ -333,7 +342,9 @@ async def update_bios():
             last_song.artist = 'No Artist'
             last_song.id = None
 
-        await asyncio.sleep(6)
+        await asyncio.sleep(sleep_time)
+        # No sleep more than 3 minutes
+        sleep_time += default_sleep_time if sleep_time <= 180 else 0
         counter_end = time.time()
         counter += counter_end - counter_start
 
@@ -368,7 +379,7 @@ async def check_deleted():
                 spotify.playlist_remove(constants.SPOTIFY_PLAYLIST_ID, spotify_ids)
                 database('delete', {'spotify_id': spotify_ids})
 
-        await asyncio.sleep(300)
+        await asyncio.sleep(3600)  # Checks every hour
 
 
 async def check_playlist():
@@ -396,7 +407,7 @@ async def check_playlist():
 
             # download each song and send it to the Telegram channel
             for song in to_be_added:
-                file = download_track(isrc=song[2], output='file')[0]
+                file = download_track(isrc=song[2], output=BytesIO())[0]
                 uploaded_file = await client.upload_file(file, part_size_kb=512)
                 msg = await client.send_file(telegram_channel, uploaded_file)
                 upload_to_db_songs.append((song[0], str(msg.id)))
@@ -425,7 +436,7 @@ async def keep_alive():
     """
     while True:
         requests.get(constants.SERVER_ADDRESS)
-        await asyncio.sleep(1740)
+        await asyncio.sleep(1740)  # checks every 29 minutes
 
 
 loop = asyncio.get_event_loop()
@@ -436,8 +447,8 @@ if constants.UPDATE_BIOS:
 if constants.CHECK_CHANNEL_DELETED:
     loop.create_task(check_deleted())
 
-if constants.USING_WEB_SERVER:
-    loop.create_task(keep_alive())
+# if constants.USING_WEB_SERVER:
+#   loop.create_task(keep_alive())
 # Use the following if you're separating the web server from the bot process
 # from within the script
 # else:
@@ -446,7 +457,6 @@ if constants.USING_WEB_SERVER:
 #    p = multiprocessing.Process(target=server.main())
 #    p.start()
 
-logging.getLogger("hachoir").setLevel(logging.ERROR)
 loop.create_task(check_playlist())
 
 while True:
