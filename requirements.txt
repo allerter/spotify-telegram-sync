@@ -8,8 +8,8 @@ h2==3.2.0
 hachoir==3.1.1
 hpack==3.0.0
 hstspreload==2020.7.22
-httpcore==0.9.1
-httpx~=0.16
+httpcore==0.12.2
+httpx==0.16.1
 hyperframe==5.2.0
 idna==2.10
 itsdangerous==1.1.0
