@@ -408,7 +408,9 @@ async def check_playlist():
             # download each song and send it to the Telegram channel
             for song in to_be_added:
                 file = download_track(isrc=song[2], output=BytesIO())[0]
-                uploaded_file = await client.upload_file(file, part_size_kb=512)
+                uploaded_file = await client.upload_file(file,
+                                                         file_name=file.name,
+                                                         part_size_kb=512)
                 msg = await client.send_file(telegram_channel, uploaded_file)
                 upload_to_db_songs.append((song[0], str(msg.id)))
 
