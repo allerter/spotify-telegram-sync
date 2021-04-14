@@ -68,4 +68,7 @@
       }
     }
   ],
+  "scripts": {
+    "postdeploy": "pip3 install asyncpg"
+  }
 }
