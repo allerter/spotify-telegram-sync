@@ -22,9 +22,12 @@ from database import Database
 from get_song_file import DeezLoader
 
 log_level = logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO"))
+log_format = "%(name)s - %(levelname)s - %(message)s"
+if not constants.USING_HEROKU:
+    log_format = "%(asctime)s - " + log_format
 sh = logging.StreamHandler()
 sh.setLevel(log_level)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+formatter = logging.Formatter(log_format)
 sh.setFormatter(formatter)
 
 # telethon logger
