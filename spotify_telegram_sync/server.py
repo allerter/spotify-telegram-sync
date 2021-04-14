@@ -3,7 +3,7 @@ import logging
 
 import uvicorn
 from bot import prepare_clients, update_playlist
-from constants import SERVER_PORT
+from constants import PORT
 from fastapi import FastAPI
 
 app = FastAPI()
@@ -36,4 +36,4 @@ async def update_playlist_path():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=SERVER_PORT)
+    uvicorn.run(app, host="0.0.0.0", port=PORT)

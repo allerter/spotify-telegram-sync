@@ -25,7 +25,7 @@ UPDATE_PLAYLIST = (
 CHECK_TELEGRAM = (
     True if os.environ.get("CHECK_TELEGRAM", "false").lower() == "true" else False
 )
-SERVER_PORT = int(os.environ.get("SERVER_PORT", 5000))
+PORT = int(os.environ.get("PORT", 5000))
 
 # This used to be the photo of the pinned message if the channel has no pic.
 DEFAULT_PIC = os.path.join(os.getcwd(), "..", "logo.png")

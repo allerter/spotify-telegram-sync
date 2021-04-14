@@ -245,6 +245,6 @@ You can start the script in two ways:
 - `python bot.py`: Usual way to start the bot.
 - `python server.py`: Starts a web server that updates the playlist if
   it receives GET requests at `/check_playlist`. This way is useful if
-  you'd like to use Cron jobs to check the playlist. Set `$SERVER_PORT`
+  you'd like to use Cron jobs to check the playlist. Set `$PORT`
   to set the port, otherwise port 5000 is used. The web server will be
   available at `http://localhost:5000/` by default.
