@@ -1,6 +1,5 @@
-from telethon.sessions import StringSession
 from telethon import TelegramClient
-
+from telethon.sessions import StringSession
 
 API_ID = int(input("Enter Telegram API ID here: "))
 API_HASH = input("Enter Telegram API hash here: ")
