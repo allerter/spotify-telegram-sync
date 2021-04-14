@@ -666,7 +666,6 @@ if __name__ == "__main__":
     if platform.system() == "Linux":
         signals = (
             signal.SIGHUP,
-            signal.SIGKILL,
             signal.SIGTERM,
             signal.SIGINT,
             signal.SIGQUIT,

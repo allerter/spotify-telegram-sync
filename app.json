@@ -63,7 +63,7 @@
       "description": "Needed to set database URL. Leave this on TRUE.",
       "value": "TRUE",
       "required": true
-    },
+    }
   },
   "addons": [
     {
@@ -73,7 +73,9 @@
       }
     }
   ],
-  "scripts": {
-    "postdeploy": "pip3 install asyncpg"
+  "formation": {
+    "worker": {
+      "quantity": 1
+    }
   }
 }

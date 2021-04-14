@@ -5,7 +5,7 @@ A userbot that syncs your Spotify playlist with your Telegram channel and
 updates your bio and a pinned message on your channel based on your
 current playback.
 
-[![image](https://www.herokucdn.com/deploy/button.svg)](https://www.heroku.com/deploy?template=https://github.com/Allerter/spotify-telegram-sync/tree/master)
+[![image](https://www.herokucdn.com/deploy/button.svg)](https://www.heroku.com/deploy?template=https://github.com/allerter/spotify-telegram-sync/tree/master)
 
 Table of Contents
 -----------------
@@ -231,12 +231,11 @@ failures in `failures.log` in the same directory of the script.
 
 Deploying to Heroku
 -------------------
-Using the *Deploy to Heroku* button above is the easiest way to set the bot up. After clicking on the link
-you will enter the value of the variables mentioned below, and if all the values are correct the bot will
-set itself up. After the deployment succeeds, all you need to to is go to the *Resource* and turn the 
-*worker* process on by clicking on its button on the right. After that the bot will be all set up. If you
-need to change any of the environment variables, you can do so using the *Config Vars* section in the
-*Settings* tab.
+Using the *Deploy to Heroku* button above is the easiest way to set the
+bot up. After clicking on the link you will enter the value of the environment
+variables mentioned above, and if all the values are correct the bot will
+set itself up and start running. If you need to change any of the environment
+variables, you can do so using the *Config Vars* section in the *Settings* tab.
 
 Starting the Bot
 ----------------
