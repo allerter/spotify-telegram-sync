@@ -1,7 +1,7 @@
 Spotify Telegram Sync
 =====================
 
-A bot that syncs your Spotify playlist with your Telegram channels and
+A userbot that syncs your Spotify playlist with your Telegram channel and
 updates your bio and a pinned message on your channel based on your
 current playback.
 
@@ -12,13 +12,15 @@ Table of Contents
 
 > -   [Setup](#setup)
 > -   [How it Works](#how-it-works)
-> -   [Environment Variables](#environment-variables)
+> -   [Starting the bot](#starting-the-bot)
 > -   [Deploying to Heroku](#deploying-to-heroku)
 
 
 Setup
 -----
 
+The term *bot* and *userbot* will be used interchangeably in this README
+to refer to the script.
 To sync your Spotify playlist with your Telegram channel you will need:
 
 -   **Spotify**: client ID, client secret, refresh token
@@ -26,6 +28,8 @@ To sync your Spotify playlist with your Telegram channel you will need:
 -   **Deezer**: ARL token
 -   **Database**: a table named *playlist* with two columns:
     *spotify\_id*, *telegram\_id*
+-   **Environment Variables**: Some env vars that you will need to set
+    after setting things up.
 
 ### Spotify
 
@@ -41,10 +45,6 @@ Before continuing, install the packages in the
 `requirements.txt` file. To do this run:
 
     pip install -r requirements.txt
-
-**Note**
-    If you'd like to enable [Local Playback](#local-playback), also install
-    the packages of `requirements.txt` in the `local playback` folder.
 
 Now run `spotify_refresh_token.py` in the `setup` folder get your
 refresh token. The script will ask for your Spotify app ID, app secret, and
@@ -73,16 +73,63 @@ video](https://www.youtube.com/watch?v=pWcG9T3WyYQ).
 
 ### Database
 
-This bot uses a *Postgres* database. But the code of `database.py` is
-relatively simple and you can modify it if you're using another DBMS.
-
 You'll need a database with a table named *playlist* that has
-*spotify\_id* and *telegram\_id* columns. If you don't use the *Deploy
-to Heroku* below, you will need to create the table yourself by
-running/modifying `setup_db.py` in the `setup` folder.
+*spotify\_id* and *telegram\_id* columns. The userbot uses SQLAlchemy
+to connect to the database and will automatically create the table for
+you. All you need to do is provide it with the correct database URL through
+the `DATABASE_URL` environment variable. Also make sure to have the database
+driver installed. For example if you'll be using Postgres, you should have
+`asyncpg` installed. Then your database URL would look something like this:
+`postgresql+asyncpg://username:password@host/database_name`
 
-Now you have all the requirements needed for the bot. Let's see how the
-bot works.
+
+### Environment Variables
+-   **DATABASE\_URL** (automatically set in Heroku)  
+    The URL of your database used by SQLAlchemy
+
+-   **SPOTIFY\_CLIENT\_ID**
+    Your Spotify app's client ID
+
+-   **SPOTIFY\_CLIENT\_SECRET**
+    Your Spotify app's client secret
+
+-   **SPOTIFY\_REFRESHT\_TOKEN**
+    Your Spotify refresh token
+
+-   **SPOTIFY\_PLAYLIST\_ID**  
+    The ID of your playlist on Spotify
+
+-   **TELETHON\_API\_ID**  
+    The API ID of your Telegram app
+
+-   **TELETHON\_API\_HASH**  
+    The API Hash of your Telegram app
+
+-   **TELEGRAM\_SESSION**  
+    The string session you generated using `string_session.py`
+
+-   **TELEGRAM\_CHANNEL**  
+    The username of your Telegram channel
+
+-   **DEEZER\_ARL\_TOKEN** 
+    Your Deezer ARL token
+
+-   **UPDATE\_BIOS**
+    Accepts `false` or `true`. Defaults to `false`.  
+    Would you like to have your account bio and a pinned message on your
+    channel to be updated to your current playback on Spotify?
+
+-   **UPDATE\_PLAYLIST**
+    Accepts `false` or `true`. Defaults to `false`.  
+    Should changes to the Spotify playlist be reflected on your Telegram channel?
+
+-   **CHECK\_TELEGRAM**
+    Accepts `false` or `true`. Defaults to `false`.  
+    Should changes to the Telegram channel be reflected on your Spotify playlist?
+    For example if a song is posted on your Telegram channel or removed from it.
+
+Now you have all the requirements needed for the userbot. Let's see how the
+it works. You can skip this part and go straight to starting the bot.
 
 
 How it Works
@@ -103,26 +150,29 @@ link* it had saved before.
 
 ### Telegram Deleted Messages
 
-The bot checks the channel's deleted messages every 5 minutes, and if it
-finds any songs, it will search for those songs in the database (using
+The bot checks the admin logs and if it finds any deleted tracks,
+it will search for those songs in the database (using
 their *Telegram link*) and then removes them from your Spotify playlist,
-and from the database as well. To enable this feature, set the
-*CHECK\_DELETED\_MESSAGES* variable to *TRUE*
+and from the database as well.
+
+Requires `$CHECK_TELEGRAM=true`
 
 ### Telegram New Messages
 
 Whenever you upload or forward a new song to your Telegram channel, the
 bot uses the song's meta data or its filename to find it on Spotify. If
 the search is successful, then the bot adds that song to your playlist
-on Spotify and the database.
+on Spotify and the database if it isn't there already.
+
+Requires `$CHECK_TELEGRAM=true`
 
 ### Updating the Bio
 
 The bot can also update your account bio and a pinned message in your
 Telegram channel to reflect your current playback on Spotify. To do
-this, the bot checks your Spotify playback every 6 seconds to see if a
-track is playing or not. If there were one, it updates your bio every 30
-seconds and the pinned message every 6 seconds to reflect that song. For
+this, the bot checks your Spotify playback every 5 seconds to see if a
+track is playing or not. If there is one, it updates your bio every 30
+seconds and the pinned message every 5 seconds to reflect that song. For
 example this is how your bio and the pinned message would look like:
 
 **Song playing**:
@@ -146,19 +196,23 @@ that case, the bot updates the two like this:
     picture of the pinned message to your channel's profile picture.
 
 To revert your bio back to its default value when there is no song
-playing, the bot looks for a message in your Saved Message. To set this
-up, go to your saved message and post a message like this: "default bio:
-This is my default bio." If you don't set this message or change the bio
+playing, the bot looks for a message in your Saved Messages. To set this
+up, go to your saved message and post a message like this: 
+```
+default bio:
+This is my default bio.
+```
+If you don't set this message or change the bio
 manually, the bot will just reset your bio to empty. Also, if you don't
 pin a message in your channel, the bot won't have anything to update and
 will check again the next time when you're playing something on Spotify.
 
-To enable this feature, set *UPDATE\_BIOS* to *TRUE*.
+Requires `$UPDATE_PLAYBACK=true`
 
-#### Local Playback
+#### ~~Local Playback~~ (This Feature Has Been Removed)
 
-What if you're listening to music locally on your Windows PC, but want
-to have the bio updated nonetheless? In this case you can run the
+What if you're listening to music locally on your Windows PC on another media player,
+but want to have the bio updated nonetheless? In this case you can run the
 `get_playing_song.py` locally. This script checks to see which processes
 are playing audio and then checks the audio files in use by those
 processes. If it finds any audio files, it will send a request to your
@@ -175,15 +229,6 @@ to the server if it determines that you're playing a song, and logs
 failures in `failures.log` in the same directory of the script.
 
 
-#### Web server
-The bot also has a `server.py` script which runs a *Flask* server. This is used
-to keep Heroku apps that use the free plan from going to sleep. To do this, the bot
-sends an HTTP request to the server every 29 minutes. The server also has a 
-`/check_playlist` path that will sync the Spotify playlist with the Telegram channel
-when it receives a GET request. Besides the two usages mentioned, the server is also
-used for getting and setting local playback which is explained above in [Local Playback](#local-playback).
-
-
 Deploying to Heroku
 -------------------
 Using the *Deploy to Heroku* button above is the easiest way to set the bot up. After clicking on the link
@@ -193,61 +238,13 @@ set itself up. After the deployment succeeds, all you need to to is go to the *R
 need to change any of the environment variables, you can do so using the *Config Vars* section in the
 *Settings* tab.
 
-Environment Variables
----------------------
+Starting the Bot
+----------------
 
-You need to set the following variables in your environment to make the
-bot work:
-
--   **DATABASE\_URL** (automatically set in Heroku)  
-    The URL of your database
-
--   **SERVER\_PORT** (automatically set in Heroku)  
-    The port of your web server if you're using one
-
--   **SPOTIFY\_CLIENT\_ID**
-    Your Spotify app's client ID
-
--   **SPOTIFY\_CLIENT\_SECRET**
-    Your Spotify app's client secret
-
--   **SPOTIFY\_REFRESHT\_TOKEN**
-    Your Spotify refresh token
-
--   **SPOTIFY\_PLAYLIST\_ID**  
-    The ID of your playlist on Spotify
-
--   **TELETHON\_API\_ID**  
-    The API ID of your Telegram app
-
--   **TELETHON\_API\_HASH**  
-    The API Hash of your Telegram app
-
--   **TELEGRAM\_SESSION**  
-    The string session you generated using string_session.py
-
--   **TELEGRAM\_CHANNEL**  
-    The username of your Telegram channel
-
--   **DEEZER\_ARL\_TOKEN** 
-    Your Deezer ARL token
-
--   **USING\_WEB\_SERVER**  
-    Whether you will be using a web server. *TRUE* for Heroku.
-
--   **APP\_NAME**  
-    The name of your app on Heroku. If you don't want to deploy the bot
-    on Heroku, manually change the `SERVER_ADDRESS` variable in
-    `constants.py` to the address of your server.
-
--   **UPDATE\_BIOS**  
-    Would you like to have your account bio and a pinned message on your
-    channel to be updated to your current playback on Spotify?"
-
--   **CHECK\_CHANNEL\_DELETED**  
-    Would you like the bot to check when you delete songs on your
-    Telegram account, and remove them from your Spotify playlist as
-    well?
-
--   **CHECK\_LOCAL\_PLAYBACK**  
-    Would you like the bot to check for local playback updates?
+You can start the script in two ways:
+- `python bot.py`: Usual way to start the bot.
+- `python server.py`: Starts a web server that updates the playlist if
+  it receives GET requests at `/check_playlist`. This way is useful if
+  you'd like to use Cron jobs to check the playlist. Set `$SERVER_PORT`
+  to set the port, otherwise port 5000 is used. The web server will be
+  available at `http://localhost:5000/` by default.
