@@ -11,6 +11,11 @@ TELETHON_API_ID = os.environ["TELETHON_API_ID"]
 TELETHON_API_HASH = os.environ["TELETHON_API_HASH"]
 TELETHON_SESSION_STRING = os.environ["TELETHON_SESSION_STRING"]
 DEEZER_ARL_TOKEN = os.environ["DEEZER_ARL_TOKEN"]
+USING_HEROKU = (
+    True if os.environ.get("USING_HEROKU", "false").lower() == "true" else False
+)
+if USING_HEROKU:
+    DATABASE_URL = DATABASE_URL.replace("postgres", "postgresql+asyncpg")
 UPDATE_BIOS = (
     True if os.environ.get("UPDATE_BIOS", "false").lower() == "true" else False
 )

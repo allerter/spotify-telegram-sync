@@ -59,6 +59,11 @@
       "value": "TRUE",
       "required": true
     },
+    "USING_HEROKU": {
+      "description": "Needed to set database URL. Leave this on TRUE.",
+      "value": "TRUE",
+      "required": true
+    },
   },
   "addons": [
     {
