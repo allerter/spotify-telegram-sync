@@ -32,7 +32,7 @@
       "description": "Your Telegram app's API hash",
       "required": true
     },
-    "TELEGRAM_SESSION": {
+    "TELETHON_SESSION_STRING": {
       "description": "The string session you generated using string_session.py",
       "required": true
     },

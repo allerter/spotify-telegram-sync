@@ -105,7 +105,7 @@ driver installed. For example if you'll be using Postgres, you should have
 -   **TELETHON\_API\_HASH**  
     The API Hash of your Telegram app
 
--   **TELEGRAM\_SESSION**  
+-   **TELETHON\_SESSION\_STRING**  
     The string session you generated using `string_session.py`
 
 -   **TELEGRAM\_CHANNEL**  
