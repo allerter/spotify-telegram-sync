@@ -1,465 +1,698 @@
-import constants
-from database import database
-from get_song_file import download_track
-
-import tekore as tk
-from telethon.tl.functions.users import GetFullUserRequest
-from telethon.tl.functions.account import UpdateProfileRequest
-from telethon import errors, events, types, TelegramClient
-from telethon.sessions import StringSession
-import requests
 import asyncio
-
-from io import BytesIO
-from string import punctuation
-from collections import namedtuple
 import logging
-import time
+import os
+import platform
 import re
-# initiate  telegram client
-logging.basicConfig(level=logging.INFO,
-                    format='%(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+import signal
+import sys
+import time
+from collections import namedtuple
+from string import punctuation
+from typing import Dict, List, Optional, Union
 
-client = TelegramClient(StringSession(constants.TELETHON_SESSION_WORKER),
-                        constants.TELETHON_API_ID, constants.TELETHON_API_HASH)
-client.start()
+import httpx
+import tekore as tk
+from telethon import TelegramClient, errors, events, tl, types
+from telethon.sessions import StringSession
+from telethon.tl.functions.account import UpdateProfileRequest
+from telethon.tl.functions.users import GetFullUserRequest
 
-spotify = constants.spotify
+import constants
+from database import Database
+from get_song_file import DeezLoader
 
-telegram_channel = client.loop.run_until_complete(
-    client.get_input_entity(constants.TELEGRAM_CHANNEL)
-)
-time.sleep(1)
-telegram_me = client.loop.run_until_complete(
-    client.get_input_entity('me')
-)
+log_level = logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO"))
+log_format = "%(name)s - %(levelname)s - %(message)s"
+if not constants.USING_HEROKU:
+    log_format = "%(asctime)s - " + log_format
+sh = logging.StreamHandler()
+sh.setLevel(log_level)
+formatter = logging.Formatter(log_format)
+sh.setFormatter(formatter)
+
+# telethon logger
+tl_logger = logging.getLogger("telethon")
+tl_logger.setLevel(logging.INFO)
+tl_logger.addHandler(sh)
+
+# bot logger
+logger = logging.getLogger("sts")
+logger.setLevel(log_level)
+logger.addHandler(sh)
 
 
-def clean_str(s):
-    return s.translate(str.maketrans('', '', punctuation)).replace(' ', '').lower()
+def clean_str(s: str) -> str:
+    return s.translate(str.maketrans("", "", punctuation)).replace(" ", "").lower()
 
 
-def send_track(file):
-    msg = client.run_until_complete(client.send_file(constants.TELEGRAM_CHANNEL, file))
-    return msg.id
+async def get_cover_art(track: tk.model.FullTrack) -> Union[str, bytes]:
+    deezer_cover_art = None
+    if isrc := track.external_ids.get("isrc"):
+        req = await httpx_client.get(f"https://api.deezer.com/track/isrc:{isrc}")
+        deezer_track = req.json()
+        deezer_cover_art = (
+            deezer_track["album"]["cover_xl"] if deezer_track.get("album") else None
+        )
+    else:
+        deezer_cover_art = None
+
+    if deezer_cover_art is not None:
+        logger.debug("Found Deezer cover art for track.")
+        cover_art = deezer_cover_art
+    else:
+        logger.debug("Downloading cover art from Spotify.")
+        cover_art = (await httpx_client.get(track.album.images[0].url)).content
+
+    return cover_art
 
 
-def delete_tracks(telegram_ids):
-    client.run_until_complete(client.delete_messages(constants.TELEGRAM_CHANNEL,
-                                                     telegram_ids))
-
-
-def search_spotify(artist, title):
-    """serarches song on spotify and returns the matches"""
+async def search_spotify(artist: str, title: str) -> List[tk.model.FullTrack]:
+    """serarches track on spotify and returns the matches"""
     matches = []
-    query = f'{title} artist:{artist}'
-    spotify_search = spotify.search(query, types=('track',))
+    query = f"{title} artist:{artist}"
+    spotify_search = await spotify.search(query, types=("track",))
     for res in spotify_search[0].items:
         res_artist = res.artists[0].name
         res_title = res.name
-        if (clean_str(res_artist) == clean_str(artist)
-                and clean_str(res_title) == clean_str(title)):
+        if clean_str(res_artist) == clean_str(artist) and clean_str(
+            res_title
+        ) == clean_str(title):
             matches.append(res)
 
     return matches
 
 
-def search_deezer(artist, title):
-    """serarches song on deezer and returns the first match's cover art"""
-    match = None
-    query = f'?q=artist:{artist} track:{title}'
-    deezer_search = requests.get('https://api.deezer.com/search' + query)
-    for res in deezer_search['data']:
-        res_artist = res['artist']['name']
-        res_title = res['title']
-        if (clean_str(res_artist) == clean_str(artist)
-                and clean_str(res_title) == clean_str(title)):
-            match = res['album']['cover_xl']
-            break
+async def search_deezer(artist: str, title: str) -> Optional[str]:
+    """serarches track on deezer and returns the first match's cover art"""
+    params = {"q": f"?q=artist:{artist} track:{title}"}
+    req = await httpx_client.get("https://api.deezer.com/search", params=params)
+    deezer_search = req.json()
+    for track in deezer_search["data"]:
+        track_artist = track["artist"]["name"]
+        track_title = track["title"]
+        if clean_str(track_artist) == clean_str(artist) and clean_str(
+            track_title
+        ) == clean_str(title):
+            return track["album"]["cover_xl"]
+    return None
 
-    return match
 
-
-@client.on(events.NewMessage(chats=(telegram_channel)))
-async def new_message_handler(event):
-    """ checks for songs in new messages to telegram channel,
+async def new_message_handler(event: events.NewMessage) -> None:
+    """checks for tracks in new messages to telegram channel,
     and adds them to spotify playlist.
     """
-    # check if event is a song
+    logger = logging.getLogger("sts.new_message")
+    logger.info("New post on Telegram channel.")
+    # check if event is a track
     if event.audio and not event.audio.attributes[0].voice:
-        # extract song artist and title
+        # extract track artist and title
         telegram_id = str(event.message.id)
         doc = event.audio.attributes
         if artist := doc[0].performer:
-            artist = artist.split(',')[0]
+            artist = artist.split(",")[0]
         else:
-            artist = ''
+            artist = ""
         title = doc[0].title
         file_name = doc[1].file_name
 
         # get artist and title from file name
         # weren't in the attributes
         if not all([artist, title]):
-            artist, title = file_name.split('-')
-            title = title[:title.rfind('.')]
+            artist, title = file_name.split("-")
+            title = title[: title.rfind(".")]
 
-        # find song on Spotify
-        matches = [res.id for res in search_spotify(artist, title)]
-        spotify_songs = []
+        # find track on Spotify
+        matches = [res.id for res in await search_spotify(artist, title)]
+        spotify_tracks = []
+        logger.debug(
+            "Spotify matches %sfound for the new message.", "" if matches else "not "
+        )
+        # get spotify playlist tracks
+        tracks = await spotify.playlist_items(
+            constants.SPOTIFY_PLAYLIST_ID, as_tracks=True
+        )
+        for item in tracks["items"]:
+            if not item["is_local"]:
+                track = item["track"]
+                spotify_tracks.append(track["id"])
+        spotify_tracks = set(spotify_tracks)
 
-        # get spotify playlist songs
-        tracks = spotify.playlist_items(constants.SPOTIFY_PLAYLIST_ID, as_tracks=True)
-        for item in tracks['items']:
-            if not item['is_local']:
-                song = item['track']
-                spotify_songs.append(song['id'])
-        spotify_songs = set(spotify_songs)
-
-        # add song to playlist and database
-        if matches and not set(matches).intersection(spotify_songs):
-            spotify.playlist_add(constants.SPOTIFY_PLAYLIST_ID,
-                                 [f'spotify:track:{matches[0]}'])
-            database('insert', [(matches[0], telegram_id)])
+        # add track to playlist and database
+        already_in_playlist = set(matches).intersection(spotify_tracks)
+        if matches and not already_in_playlist:
+            await spotify.playlist_add(
+                constants.SPOTIFY_PLAYLIST_ID, [f"spotify:track:{matches[0]}"]
+            )
+            await database.add_tracks([(matches[0], telegram_id)])
+            logger.info("Added Telegram track on Spotify.")
+        else:
+            if already_in_playlist:
+                logger.info("Telegram track is already in playlist.")
 
 
-def get_user_about(current_song):
-    user_about = f'listening to {current_song.name} by {current_song.artist}'
+def format_user_about(current_track: tk.model.FullTrack) -> str:
+    user_about = f"listening to {current_track.name} by {current_track.artists[0].name}"
     if len(user_about) > 70:
-        user_about = f'🎧 {current_song.artist} - {current_song.name}'
+        user_about = f"🎧 {current_track.artists[0].name} - {current_track.name}"
         if len(user_about) > 70:
-            user_about = re.sub(r'.feat.*[\)\[]', '', user_about)
+            user_about = re.sub(r".feat.*[\)\[]", "", user_about)
             if len(user_about) > 70:
-                user_about = user_about[:67] + '...'
+                user_about = user_about[:67] + "..."
     return user_about
 
 
-async def update_bios():
-    last_song = namedtuple('last_song', ['artist', 'name', 'id'])
-    last_song.name = 'No Song Was Playing'
-    last_song.artist = 'No Artist'
-    last_song.id = None
-    pinned_message = await client.get_messages(telegram_channel,
-                                               ids=types.InputMessagePinned())
-    await asyncio.sleep(1)
+async def get_default_pic() -> Union[str, bytes, tl.custom.InputSizedFile]:
     pic = await client.download_profile_photo(telegram_channel, file=bytes)
-    telegram_channel_pic = (await client.upload_file(pic)
-                            if pic is not None else constants.DEFAULT_PIC)
+    if pic is None:
+        playlist = await spotify.playlist(constants.SPOTIFY_PLAYLIST_ID)
+        if playlist.images:
+            default_pic = (await httpx_client.get(playlist.images[0].url)).content
+        else:
+            default_pic = constants.DEFAULT_PIC
+    else:
+        default_pic = await client.upload_file(pic)
+    return default_pic
+
+
+async def update_bios() -> None:
+    global pinned_message, default_pic
+
+    logger = logging.getLogger("sts.update_bios")
+    last_track = namedtuple("last_track", ["artist", "name", "id"])
+    last_track.name = "No Song Was Playing"
+    last_track.artist = "No Artist"
+    last_track.id = None
+    pinned_message = await client.get_messages(
+        telegram_channel, ids=types.InputMessagePinned()
+    )
+    await asyncio.sleep(1)
+    default_pic = await get_default_pic()
 
     one_hour_counter = time.time()
     default_sleep_time = 5
     sleep_time = default_sleep_time
     counter = 30
+    counter_start = time.time()
 
     while True:
         # get user bio and spotify playback
-        counter_start = time.time()
+        logger.info("Checking playback...")
+        logger.debug("Counter: %d - counter_start: %s", counter, counter_start)
         if counter >= 30:
+            logger.debug("Getting user about.")
             user_full = await client(GetFullUserRequest(telegram_me))
             user_about = user_full.about
             if user_about is None:
-                user_about = ''
+                user_about = ""
             user_id = user_full.user.id
             user_first_name = user_full.user.first_name
 
+            # update channel pic every hour
             if counter_start - one_hour_counter >= 3600:
-                pic = await client.download_profile_photo(telegram_channel, file=bytes)
-                telegram_channel_pic = (await client.upload_file(pic)
-                                        if pic is not None else constants.DEFAULT_PIC)
+                logger.debug("Getting default photo and pinned message.")
+                default_pic = await get_default_pic()
                 await asyncio.sleep(1)
                 pinned_message = await client.get_messages(
-                    telegram_channel,
-                    ids=types.InputMessagePinned()
+                    telegram_channel, ids=types.InputMessagePinned()
                 )
                 one_hour_counter = counter_start
         try:
-            playback = spotify.playback_currently_playing(tracks_only=True)
+            playback = await spotify.playback_currently_playing(tracks_only=True)
         except tk.ServiceUnavailable:
-            logger.log(logging.INFO, 'Spotify Unavilable')
+            logger.info("Spotify unavilable")
             playback = None
         except tk.TooManyRequests as e:
-            wait = e.response.headers['Retry-After']
-            logger.log(logging.WARN, 'Spotify rate limit exceeded')
+            wait = e.response.headers["Retry-After"]
+            logger.warn("Spotify rate limit exceeded. Waiting %d seconds", wait)
             await asyncio.sleep(wait + 1)
             counter += wait + 1
             playback = None
         except tk.HTTPError as e:
-            error = f'HTTPError caught: {str(e)}'
-            logger.log(logging.INFO, error)
+            error = f"HTTPError caught: {str(e)}"
+            logger.error(error)
             playback = None
         except Exception as e:
-            error = f'Exception caught: {e}'
-            logger.log(logging.INFO, error)
+            error = f"Exception caught: {type(e)} - {str(e)}"
+            logger.error(error)
             playback = None
 
-        if ((playback and playback.is_playing and playback.item)
-                or constants.CHECK_LOCAL_PLAYBACK is False):
-            local_playback = None
-        else:
-            url = f'{constants.SERVER_ADDRESS}/local_playback'
-            local_playback = requests.get(url).json()
-            if counter_start - local_playback['time'] > 10:
-                local_playback = None
         # check if a track is playing
-        if (playback and playback.is_playing and playback.item) or local_playback:
+        if playback and playback.is_playing and playback.item:
+            logger.info("Playback is playing.")
             # Reset to default since user is playing and might change the track soon
             sleep_time = default_sleep_time
-
-            if local_playback:
-                item_artist = local_playback['artist']
-                item_name = local_playback['title']
-            else:
-                item_artist = playback.item.artists[0].name
-                item_name = playback.item.name
-
-            current_song = namedtuple('current_song', ['artist', 'name', 'id'])
-            current_song.artist = item_artist if item_artist else 'Unknown Artist'
-            current_song.name = item_name if item_name else 'Unknown Title'
-            current_song.id = playback.item.id if playback and playback.item else None
-            # if current track is same as the last track, there's no need to update
-            if (
-                    (playback and playback.item.is_local
-                        and current_song.name != last_song.name)
-                    or (playback and current_song.id != last_song.id)
-                    or (local_playback and current_song.name != last_song.name)
-            ):
-
-                if (local_playback
-                    and current_song.artist != 'Unknown Artist'
-                    and current_song.name != 'Unknown Title'
-                    and (matches := search_spotify(item_artist, item_name))
-                        and matches[0].external_ids.get('isrc')):
-                    isrc = matches[0].external_ids['isrc']
-                    cover_art = requests.get(
-                        f'https://api.deezer.com/track/isrc:{isrc}')
-                    cover_art = (cover_art.json()['album']['cover_xl']
-                                 if cover_art.json().get('album')
-                                 else requests.get(matches[0].images[0].url).content
-                                 )
-                    current_song_url = matches[0].external_urls['spotify']
-                    current_song.id = matches[0].id
-
-                elif (playback
-                      and not playback.item.is_local):
-                    if isrc := playback.item.external_ids.get('isrc'):
-                        cover_art = requests.get(
-                            f'https://api.deezer.com/track/isrc:{isrc}').json()
-                        item_pic = playback.item.album.images[0].url
-                        cover_art = (cover_art['album']['cover_xl']
-                                     if cover_art.get('album')
-                                     else requests.get(item_pic).content
-                                     )
-                    else:
-                        item_pic = playback.item.album.images[0].url
-                        cover_art = requests.get(item_pic).content
-                    current_song_url = playback.item.external_urls['spotify']
+            current_track = playback.item
+            # if current track is the same as the last track, there's no need to update
+            if playback and current_track.id != last_track.id:
+                logger.info("New track: %s", current_track.name)
+                if playback and not playback.item.is_local:
+                    cover_art = await get_cover_art(playback.item)
+                    current_track_url = playback.item.external_urls["spotify"]
                 else:
-                    cover_art = telegram_channel_pic
-                    current_song_url = '""'
+                    cover_art = default_pic
+                    current_track_url = '""'
 
-                # setting pinned_message text
-                text = (f'[{current_song.name}]({current_song_url}) by '
-                        f'{current_song.artist}'
-                        )
-
-                msg_text = (f'[{user_first_name}](tg://user?id={user_id})'
-                            + ' is listening to '
-                            + text
-                            )
-
-                # replacing user bio and keeping it shorter than the limit (70)
+                # don't include secondary artists in artist name
+                # if they're already in the title (featured artists)
+                artist = " & ".join(
+                    artist.name
+                    for artist in current_track.artists
+                    if artist.name not in current_track.name
+                )
+                text = f"[{current_track.name}]({current_track_url}) by " f"{artist}"
+                msg_text = (
+                    f"[{user_first_name}](tg://user?id={user_id}) "
+                    + "is listening to "
+                    + text
+                )
+                # replace user bio and keep it shorter than the limit (70 chars)
                 if counter >= 30:
-                    user_about = get_user_about(current_song)
+                    user_about = format_user_about(current_track)
                     try:
                         counter = 0
                         await client(UpdateProfileRequest(about=user_about))
                     except errors.MessageNotModifiedError:
-                        pass
+                        logger.info("User bio is the current track. Skipping update")
                     except errors.FloodWaitError as e:
+                        logger.warn(
+                            (
+                                "Flood wait for updating user bio. "
+                                "Penalty: %d seconds"
+                            ),
+                            e.seconds,
+                        )
                         counter -= e.seconds
                     counter_start = time.time()
 
                 # update pinned message
-                try:
-                    if pinned_message:
-                        await client.edit_message(telegram_channel,
-                                                  pinned_message.id,
-                                                  text=msg_text, link_preview=False,
-                                                  file=cover_art if cover_art else None)
-                except errors.MessageNotModifiedError:
-                    pass
-                except errors.FloodWaitError as e:
-                    await asyncio.sleep(e.seconds)
-                    logger.log(logging.WARN, 'Flood wait for updating pinned message')
+                if pinned_message:
+                    try:
+                        await client.edit_message(
+                            telegram_channel,
+                            pinned_message.id,
+                            text=msg_text,
+                            link_preview=False,
+                            file=cover_art if cover_art else None,
+                        )
+                    except errors.MessageIdInvalidError:
+                        logger.info("Pinned message not found. Must have been deleted!")
+                        pinned_message = None
+                    except errors.MessageNotModifiedError:
+                        logger.info(
+                            "Pinned message is the current track. Skipping update"
+                        )
+                    except errors.FloodWaitError as e:
+                        logger.warn(
+                            (
+                                "Flood wait for updating pinned message. "
+                                "Waiting %d seconds"
+                            ),
+                            e.seconds,
+                        )
+                        await asyncio.sleep(e.seconds)
 
-                last_song = current_song
-
-            elif counter >= 30 and current_song.name not in user_about:
-                user_about = get_user_about(current_song)
+                last_track = current_track
+            elif counter >= 30 and current_track.name not in user_about:
+                # for cases where pinned message was updated,
+                # but the user bio wasn't because the counter hadn't reached 30
+                logger.info("Current track not in user about. Updating...")
+                user_about = format_user_about(current_track)
                 try:
                     counter = 0
                     await client(UpdateProfileRequest(about=user_about))
                 except errors.MessageNotModifiedError:
-                    pass
+                    logger.info("User bio is the current track. Skipping update")
                 except errors.FloodWaitError as e:
+                    logger.warn(
+                        ("Flood wait for updating user bio. " "Penalty: %d"), e.seconds
+                    )
                     counter -= e.seconds
                 counter_start = time.time()
+            else:
+                if pinned_message:
+                    logger.info("Pinned message already displaying track.")
+                else:
+                    logger.info("No pinned mesage to update (yet).")
         else:
+            logger.info("Playback is paused.")
             if counter >= 30:
                 # look for the default bio in user's saved messages
-                if saved_msg := await client.get_messages(telegram_me,
-                                                          search='default bio'):
+                if saved_msg := await client.get_messages(
+                    telegram_me, search="default bio"
+                ):
                     default_user_about = (
-                        saved_msg[0].text
-                        .replace('default bio:', '')
-                        .strip()
+                        saved_msg[0].text.replace("default bio:", "").strip()[:70]
                     )
+                    logger.info("Default user about found. Using default.")
                 else:
-                    default_user_about = ''
+                    default_user_about = ""
+                    logger.info("Default user about not found. Setting it to empty.")
                 # update user bio to defaul value if it already isn't
                 if default_user_about != user_about:
                     await client(UpdateProfileRequest(about=default_user_about))
                     counter = 0
                     counter_start = time.time()
 
-            if last_song.name != 'No Song Was Playing' and pinned_message:
+            if last_track.name != "No Song Was Playing" and pinned_message:
+                logger.info("Updating pinned message.")
                 msg_text = pinned_message.text
-                msg_text = (msg_text[:msg_text.find(')') + 1]
-                            + " isn't listening to anything right now."
-                            )
+                msg_text = (
+                    msg_text[: msg_text.find(")") + 1]
+                    + " isn't listening to anything right now."
+                )
                 try:
-                    await client.edit_message(telegram_channel,
-                                              pinned_message.id,
-                                              text=msg_text, link_preview=False,
-                                              file=telegram_channel_pic)
+                    await client.edit_message(
+                        telegram_channel,
+                        pinned_message.id,
+                        text=msg_text,
+                        link_preview=False,
+                        file=default_pic,
+                    )
+                except errors.MessageIdInvalidError:
+                    logger.info("Pinned message not found. Must have been deleted!")
+                    pinned_message = None
                 except errors.MessageNotModifiedError:
-                    pass
+                    logger.info("Pinned message is still the default. Skipping update.")
                 except errors.FloodWaitError as e:
+                    logger.warn(
+                        ("Flood wait for updating pinnes message. Waiting %d seconds."),
+                        e.seconds,
+                    )
                     await asyncio.sleep(e.seconds)
-                    logger.log(logging.WARN, 'Flood wait for updating pinned message')
 
-            last_song.name = 'No Song Was Playing'
-            last_song.artist = 'No Artist'
-            last_song.id = None
+            last_track.name = "No Song Was Playing"
+            last_track.artist = "No Artist"
+            last_track.id = None
 
+        logger.debug("Sleeping for %d seconds.", sleep_time)
         await asyncio.sleep(sleep_time)
-        # No sleep more than 3 minutes
+        # don't sleep more than 3 minutes
         sleep_time += default_sleep_time if sleep_time <= 180 else 0
         counter_end = time.time()
-        counter += counter_end - counter_start
+        counter += int(counter_end - counter_start)
 
 
-async def check_deleted():
+async def check_deleted() -> None:
+    logger = logging.getLogger("sts.check_deleted")
     old_id = 1
     while True:
+        logger.info("Checking Telegram admin log for deleted tracks...")
         deleted = []
-        async for event in client.iter_admin_log(telegram_channel,
-                                                 min_id=old_id):
+        async for event in client.iter_admin_log(telegram_channel, min_id=old_id):
             # event should be: deleted, audio, and not a voice audio
             if event.deleted_message:
                 try:
-                    if not (event.old.media
-                            and event.old.media.document
-                            and event.old.media.document.mime_type == 'audio/mpeg'
-                            and not event.old.media.document.attributes[0].voice):
+                    if not (
+                        event.old.media
+                        and event.old.media.document
+                        and event.old.media.document.mime_type == "audio/mpeg"
+                        and not event.old.media.document.attributes[0].voice
+                    ):
                         continue
                 except AttributeError:
                     continue
-
+                logger.info("Found deleted track. Message ID: %d", event.old.id)
                 # add message id to be checked against DB records
                 deleted.append((str(event.old.id)))
         else:
             old_id = event.old.id
+            logger.debug("Setting last checked log ID to %d.", old_id)
 
-        # delete songs from spotify
+        # delete tracks from spotify
         if deleted:
-            songs = database('select', {'telegram_id': deleted})
-            if songs:
-                spotify_ids = [x[0] for x in songs]
-                spotify.playlist_remove(constants.SPOTIFY_PLAYLIST_ID, spotify_ids)
-                database('delete', {'spotify_id': spotify_ids})
+            tracks = await database.get_tracks(telegram_ids=deleted)
+            if tracks:
+                spotify_ids = [x.spotify_id for x in tracks]
+                await spotify.playlist_remove(
+                    constants.SPOTIFY_PLAYLIST_ID, spotify_ids
+                )
+                await database.delete_tracks(spotify_ids=spotify_ids)
+                logger.info(
+                    "Deleted following tracks from Spotify playlist: %s", tracks
+                )
+            else:
+                logger.info("Tracks were already deleted from Spotify.")
 
-        await asyncio.sleep(3600)  # Checks every hour
+        await asyncio.sleep(3600)  # checks every hour
 
 
-async def check_playlist():
+async def update_playlist(
+    spotify: tk.Spotify,
+    telegram: TelegramClient,
+    database: Database,
+    telegram_channel: types.InputPeerChannel,
+) -> None:
+    logger = logging.getLogger("sts.update_playlist")
+    logger.info("Checking playlist...")
+    # get id, url and isrc of non-local tracks
+
+    spotify_tracks = []
+    tracks = await spotify.playlist_items(constants.SPOTIFY_PLAYLIST_ID)
+    for item in tracks.items:
+        track = item.track
+        if track and not track.is_local and track.external_ids.get("isrc"):
+            spotify_tracks.append(
+                (
+                    track.id,
+                    track.external_urls["spotify"],
+                    track.external_ids["isrc"],
+                )
+            )
+
+    # get tracks from db
+    playlist = await database.get_all_tracks()
+    difference = len(spotify_tracks) - len(playlist)
+    # tracks were added to the playlist
+    if difference > 0:
+        logger.info(
+            "%d tracks were added on Spotify. Downloading tracks...", difference
+        )
+        upload_to_db_tracks = []
+        playlist = [x.spotify_id for x in playlist]
+        # specify new tracks
+        to_be_added = list(set([x[0] for x in spotify_tracks]) - set(playlist))
+        to_be_added = [x for x in spotify_tracks if x[0] in to_be_added]
+
+        # download each track and send it to the Telegram channel
+        deezer = DeezLoader(constants.DEEZER_ARL_TOKEN)
+        for track in to_be_added:
+            logger.debug("Downloading %s", track[0])
+            file = None
+            try:
+                file = await deezer.from_spotify(isrc=track[2])
+            except Exception as e:
+                logger.error(
+                    "Couldn't download track %s. Reason: %s",
+                    track[0],
+                    f"{type(e)} - {str(e)}",
+                )
+            if file:
+                logger.debug("Uploading %s", track[0])
+                uploaded_file = await telegram.upload_file(
+                    file, file_name=file.name, part_size_kb=512
+                )
+                msg = await telegram.send_file(telegram_channel, uploaded_file)
+                msg_id = str(msg.id)
+                logger.info("Added track %s on Telegram.", track[0])
+            else:
+                msg_id = None
+            upload_to_db_tracks.append((track[0], msg_id))
+
+        # add new tracks to database
+        await database.add_tracks(upload_to_db_tracks)
+        logger.debug("Added tracks to database.")
+        logger.info("Playlist updated.")
+    # tracks were removed from the playlist
+    elif difference < 0:
+        # specify deleted tracks
+        logger.info("%d Tracks were removed on Spotify. Deleting...", abs(difference))
+        playlist = [(x.spotify_id, x.telegram_id) for x in playlist]
+        spotify_ids = list(
+            set([x[0] for x in playlist]) - set([x[0] for x in spotify_tracks])
+        )
+        # get telegram ids of deleted tracks and delete them
+        telegram_ids = [x[1] for x in playlist if x[0] in spotify_ids]
+        try:
+            await telegram.delete_messages(telegram_channel, telegram_ids)
+        except Exception as e:
+            logger.error("Couldn't delete tracks on Telegram. Reason: %s", e)
+
+        # remove deleted tracks from database
+        await database.delete_tracks(spotify_ids=spotify_ids)
+        logger.debug("Deleted tracks from database.")
+        logger.info("Playlist updated. Deleted tracks: %s", spotify_ids)
+    else:
+        logger.info("Playlist is already up to date.")
+
+
+async def update_playlist_loop() -> None:
     while True:
-        # get id, url and isrc of non-local songs
-        spotify_songs = []
-        tracks = spotify.playlist_items(constants.SPOTIFY_PLAYLIST_ID)
-        for item in tracks.items:
-            track = item.track
-            if track and not track.is_local and track.external_ids.get('isrc'):
-                spotify_songs.append((track.id,
-                                      track.external_urls['spotify'],
-                                      track.external_ids['isrc']))
-
-        # get songs from db
-        playlist = database('select')
-        difference = len(spotify_songs) - len(playlist)
-        # songs were added to the playlist
-        if difference > 0:
-            upload_to_db_songs = []
-            playlist = [x[0] for x in playlist]
-            # specify new songs
-            to_be_added = list(set([x[0] for x in spotify_songs]) - set(playlist))
-            to_be_added = [x for x in spotify_songs if x[0] in to_be_added]
-
-            # download each song and send it to the Telegram channel
-            for song in to_be_added:
-                file = download_track(isrc=song[2], output=BytesIO())[0]
-                uploaded_file = await client.upload_file(file,
-                                                         file_name=file.name,
-                                                         part_size_kb=512)
-                msg = await client.send_file(telegram_channel, uploaded_file)
-                upload_to_db_songs.append((song[0], str(msg.id)))
-
-            # add new songs to database
-            database('insert', upload_to_db_songs)
-        # songs were removed from the playlist
-        elif difference < 0:
-            # specify deleted songs
-            spotify_ids = list(set([x[0] for x in playlist])
-                               - set([x[0] for x in spotify_songs]))
-
-            # get telegram ids of deleted songs and delete them
-            telegram_ids = [x[1] for x in playlist if x[0] in spotify_ids]
-            await client.delete_messages(telegram_channel, telegram_ids)
-
-            # remove deleted songs from database
-            database('delete', {'spotify_id': spotify_ids})
+        await update_playlist(database=database, telegram=client, spotify=spotify)
         await asyncio.sleep(300)
 
 
-async def keep_alive():
-    """Keep Heroku app from going to sleep
-    by sending GET requests to the web server
+async def prepare_clients(
+    queue: asyncio.Queue,
+    use_database: bool = True,
+    use_telegram: bool = True,
+    use_httpx: bool = True,
+    use_spotify: bool = True,
+) -> None:
+    ClientTypes = Union[tk.Spotify, TelegramClient, Database, httpx.AsyncClient]
+    clients: Dict[str, ClientTypes] = {}
+    # database
+    if use_database:
+        database = Database()
+        await database.init(constants.DATABASE_URL)
+        clients["database"] = database
+        logger.debug("Database is ready.")
 
-    """
+    # telegram
+    if use_telegram:
+        telegram = TelegramClient(
+            StringSession(constants.TELETHON_SESSION_STRING),
+            constants.TELETHON_API_ID,
+            constants.TELETHON_API_HASH,
+        )
+        await telegram.start()
+        clients["telegram"] = telegram
+        logger.debug("Telegram is ready.")
+        clients["telegram_channel"] = await telegram.get_input_entity(
+            constants.TELEGRAM_CHANNEL
+        )
+
+    # httpx
+    if use_httpx:
+        httpx_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(10.0, connect=20.0),
+            http2=True,
+        )
+        clients["httpx"] = httpx_client
+        logger.debug("httpx is ready.")
+
+    # spotify
+    if use_spotify:
+        cred = tk.RefreshingCredentials(
+            constants.SPOTIFY_CLIENT_ID, constants.SPOTIFY_CLIENT_SECRET
+        )
+        token = cred.refresh_user_token(constants.SPOTIFY_REFRESH_TOKEN)
+        spotify = tk.Spotify(token, asynchronous=True)
+        clients["spotify"] = spotify
+        logger.debug("Spotify is ready.")
+
+    await queue.put(clients)
+
+
+async def clean_up() -> None:
+    if constants.UPDATE_BIOS:
+        try:
+            await client(UpdateProfileRequest(about=""))
+        except errors.MessageNotModifiedError:
+            pass
+        except Exception as e:
+            logger.error("Telegram error while cleaning up: %s", e)
+        try:
+            if pinned_message is not None:
+                msg_text = pinned_message.text
+                msg_text = (
+                    msg_text[: msg_text.find(")") + 1]
+                    + " isn't listening to anything right now."
+                )
+                await client.edit_message(
+                    telegram_channel,
+                    pinned_message.id,
+                    text=msg_text,
+                    link_preview=False,
+                )
+        except errors.MessageNotModifiedError:
+            pass
+        except Exception as e:
+            logger.error("Telegram error while cleaning up: %s", e)
+    await client.disconnect()
+    await httpx_client.aclose()
+    await spotify.close()
+
+
+async def signal_handler(
+    signal: signal.Signals, loop: asyncio.AbstractEventLoop
+) -> None:
+    logger.info(f"Received exit signal {signal.name}...")
+    await clean_up()
+    exit(0)
+
+
+async def exception_handler(loop: asyncio.AbstractEventLoop, context: dict) -> None:
+    logger.error("Exception raised: %s", context["message"])
+    await clean_up()
+    exit(1)
+
+
+if __name__ == "__main__":
+    logger.info("Starting up...")
+    loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
+
+    queue = asyncio.Queue()
+    loop.run_until_complete(prepare_clients(queue))
+    clients = loop.run_until_complete(queue.get())
+    database = clients["database"]
+    httpx_client = clients["httpx"]
+    client = clients["telegram"]
+    spotify = clients["spotify"]
+    pinned_message = None
+    default_pic = None
+    telegram_channel = clients["telegram_channel"]
+    time.sleep(1)
+    telegram_me = client.loop.run_until_complete(client.get_input_entity("me"))
+
+    tasks = []
+    if constants.UPDATE_BIOS and constants.UPDATE_PLAYLIST:
+        logger.info("Update playlist: ✔️ | Update bio: ✔️")
+        tasks.append(loop.create_task(update_bios()))
+        tasks.append(loop.create_task(update_playlist_loop()))
+    elif constants.UPDATE_BIOS:
+        logger.info("Update playlist: ❌ | Update bio: ✔️")
+        tasks.append(loop.create_task(update_bios()))
+    else:
+        logger.info("Update playlist: ✔️ | Update bio: ❌")
+        tasks.append(loop.create_task(update_playlist_loop()))
+    if constants.CHECK_TELEGRAM:
+        logger.info("Check Telegram: ✔️")
+        tasks.append(loop.create_task(check_deleted()))
+        client.on(events.NewMessage(chats=(telegram_channel)))(new_message_handler)
+    else:
+        logger.info("Check Telegram: ❌")
+
+    # handle signals
+    if platform.system() == "Linux":
+        signals = (
+            signal.SIGHUP,
+            signal.SIGKILL,
+            signal.SIGTERM,
+            signal.SIGINT,
+            signal.SIGQUIT,
+        )
+        for s in signals:
+            loop.add_signal_handler(
+                s, lambda s=s: asyncio.create_task(signal_handler(s, loop))
+            )
+
+    loop.set_exception_handler(exception_handler)
+
     while True:
-        requests.get(constants.SERVER_ADDRESS)
-        await asyncio.sleep(1740)  # checks every 29 minutes
-
-
-loop = asyncio.get_event_loop()
-
-if constants.UPDATE_BIOS:
-    loop.create_task(update_bios())
-
-if constants.CHECK_CHANNEL_DELETED:
-    loop.create_task(check_deleted())
-
-# if constants.USING_WEB_SERVER:
-#   loop.create_task(keep_alive())
-# Use the following if you're separating the web server from the bot process
-# from within the script
-# else:
-#    import server
-#    import multiprocessing
-#    p = multiprocessing.Process(target=server.main())
-#    p.start()
-
-loop.create_task(check_playlist())
-
-while True:
-    client.run_until_disconnected()
+        try:
+            loop.run_forever()
+        except KeyboardInterrupt:
+            logger.info("KeyboardInterrupt received.")
+            exit(0)
+        except Exception as e:
+            if isinstance(e, OSError) and e.args[0].startswith("Signal"):
+                exit(0)
+            else:
+                tb = sys.exc_info()[2]
+                logger.error("Exception: %s, ", e.with_traceback(tb))
+                exit(1)
+        finally:
+            logger.info("Cleaning up before exiting...")
+            loop.run_until_complete(clean_up())
+        logger.info("Telegram client disconnected. Restarting...")
+        client.start()

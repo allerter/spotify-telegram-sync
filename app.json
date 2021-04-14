@@ -1,6 +1,6 @@
 {
   "name": "Spotify Telegram Sync",
-  "description": "A bot that syncs your Spotify playlist with your Telegram channel, and updates your bio and the pinned message on your channel to your current playback.",
+  "description": "A userbot that syncs your Spotify playlist with your Telegram channel, and updates your bio and the pinned message on your channel to your current playback.",
   "keywords": [
     "Telegram",
     "Spotify",
@@ -8,10 +8,6 @@
   ],
   "logo": "https://github.com/Allerter/spotify-telegram-sync/blob/master/logo.png?raw=true",
   "env": {
-    "APP_NAME": {
-      "description": "The app name you entered above",
-      "required": true
-    },
     "SPOTIFY_CLIENT_ID": {
       "description": "Your Spotify app's client ID",
       "required": true
@@ -36,7 +32,7 @@
       "description": "Your Telegram app's API hash",
       "required": true
     },
-    "TELEGRAM_SESSION": {
+    "TELETHON_SESSION_STRING": {
       "description": "The string session you generated using string_session.py",
       "required": true
     },
@@ -53,21 +49,21 @@
       "value": "TRUE",
       "required": true
     },
-    "CHECK_CHANNEL_DELETED": {
-      "description": "Would you like the bot to check when you delete songs on your Telegram account, and remove them from your Spotify playlist as well?",
-      "value": "FALSE",
-      "required": true
-    },
-    "CHECK_LOCAL_PLAYBACK": {
-      "description": "Would you like the bot to check for local playback updates?",
+    "UPDATE_PLAYLIST": {
+      "description": "Should changes to the Spotify playlist be reflected on your Telegram channel?",
       "value": "TRUE",
       "required": true
     },
-    "USING_WEB_SERVER": {
-      "description": "Will you be using a web server? TRUE if you're using the free plan on Heroku.",
+    "CHECK_TELEGRAM": {
+      "description": "Should changes to the Telegram channel be reflected on your Spotify playlist? For example if a song is posted on your Telegram channel or removed from it.",
       "value": "TRUE",
       "required": true
-    }
+    },
+    "USING_HEROKU": {
+      "description": "Needed to set database URL. Leave this on TRUE.",
+      "value": "TRUE",
+      "required": true
+    },
   },
   "addons": [
     {
@@ -78,6 +74,6 @@
     }
   ],
   "scripts": {
-    "postdeploy": "python3 setup/setup_db.py;"
+    "postdeploy": "pip3 install asyncpg"
   }
 }
