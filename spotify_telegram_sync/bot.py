@@ -320,7 +320,7 @@ async def update_bios() -> None:
                 else:
                     logger.info("No pinned mesage to update (yet).")
         else:
-            logger.debug("Playback is paused. Updating...")
+            logger.info("Playback is paused.")
             if counter >= 30:
                 # look for the default bio in user's saved messages
                 if saved_msg := await client.get_messages(
