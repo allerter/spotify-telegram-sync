@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import platform
 import re
 import signal
@@ -20,9 +21,10 @@ from telethon.tl.functions.account import UpdateProfileRequest
 from telethon.tl.functions.users import GetFullUserRequest
 
 # initiate  telegram client
-logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
+log_level = logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO"))
+logging.basicConfig(level=log_level, format="%(levelname)s - %(message)s")
 logger = logging.getLogger("sts")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(log_level)
 
 
 def clean_str(s: str) -> str:
