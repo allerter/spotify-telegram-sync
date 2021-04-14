@@ -661,7 +661,13 @@ if __name__ == "__main__":
 
     # handle signals
     if platform.system() == "Linux":
-        signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT, signal.SIGQUIT)
+        signals = (
+            signal.SIGHUP,
+            signal.SIGKILL,
+            signal.SIGTERM,
+            signal.SIGINT,
+            signal.SIGQUIT,
+        )
         for s in signals:
             loop.add_signal_handler(
                 s, lambda s=s: asyncio.create_task(signal_handler(s, loop))
