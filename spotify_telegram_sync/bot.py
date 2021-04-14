@@ -597,12 +597,14 @@ async def signal_handler(
     signal: signal.Signals, loop: asyncio.AbstractEventLoop
 ) -> None:
     logger.info(f"Received exit signal {signal.name}...")
-    raise OSError(f"Signal: {signal.name}")
+    await clean_up()
+    exit(0)
 
 
 async def exception_handler(loop: asyncio.AbstractEventLoop, context: dict) -> None:
     logger.error("Exception raised: %s", context["message"])
     await clean_up()
+    exit(1)
 
 
 if __name__ == "__main__":
@@ -643,16 +645,14 @@ if __name__ == "__main__":
         logger.info("Check Telegram: ❌")
 
     # handle signals
-    if platform.system() != "Linux":
-        loop.set_exception_handler(exception_handler)
-    else:
+    if platform.system() == "Linux":
         signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT, signal.SIGQUIT)
         for s in signals:
             loop.add_signal_handler(
                 s, lambda s=s: asyncio.create_task(signal_handler(s, loop))
             )
 
-    # loop.set_exception_handler(handle_exception)
+    loop.set_exception_handler(exception_handler)
 
     while True:
         try:
