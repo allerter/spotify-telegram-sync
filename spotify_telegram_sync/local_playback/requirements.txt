@@ -1,6 +1,0 @@
-requests~=2.25
-mutagen==1.45.1
-psutil==5.7.2
-enum34==1.1.10
-future==0.18.2
-comtypes==1.1.7
