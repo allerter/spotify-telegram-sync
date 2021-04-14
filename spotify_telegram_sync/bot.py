@@ -423,7 +423,10 @@ async def check_deleted() -> None:
 
 
 async def update_playlist(
-    spotify: tk.Spotify, telegram: TelegramClient, database: Database
+    spotify: tk.Spotify,
+    telegram: TelegramClient,
+    database: Database,
+    telegram_channel: types.InputPeerChannel
 ) -> None:
     logger = logging.getLogger("sts.update_playlist")
     logger.info("Checking playlist...")
@@ -540,6 +543,9 @@ async def prepare_clients(
         await telegram.start()
         clients["telegram"] = telegram
         logger.debug("Telegram is ready.")
+        clients["telegram_channel"] = (
+            await telegram.get_input_entity(constants.TELEGRAM_CHANNEL)
+        )
 
     # httpx
     if use_httpx:
@@ -620,9 +626,7 @@ if __name__ == "__main__":
     spotify = clients["spotify"]
     pinned_message = None
     default_pic = None
-    telegram_channel = client.loop.run_until_complete(
-        client.get_input_entity(constants.TELEGRAM_CHANNEL)
-    )
+    telegram_channel = clients["telegram_channel"]
     time.sleep(1)
     telegram_me = client.loop.run_until_complete(client.get_input_entity("me"))
 
