@@ -10,21 +10,32 @@ from collections import namedtuple
 from string import punctuation
 from typing import Dict, List, Optional, Union
 
-import constants
 import httpx
 import tekore as tk
-from database import Database
-from get_song_file import DeezLoader
 from telethon import TelegramClient, errors, events, tl, types
 from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
 from telethon.tl.functions.users import GetFullUserRequest
 
-# initiate  telegram client
+import constants
+from database import Database
+from get_song_file import DeezLoader
+
 log_level = logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO"))
-logging.basicConfig(level=log_level, format="%(levelname)s - %(message)s")
+sh = logging.StreamHandler()
+sh.setLevel(log_level)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+sh.setFormatter(formatter)
+
+# telethon logger
+tl_logger = logging.getLogger("telethon")
+tl_logger.setLevel(logging.INFO)
+tl_logger.addHandler(sh)
+
+# bot logger
 logger = logging.getLogger("sts")
 logger.setLevel(log_level)
+logger.addHandler(sh)
 
 
 def clean_str(s: str) -> str:
@@ -426,7 +437,7 @@ async def update_playlist(
     spotify: tk.Spotify,
     telegram: TelegramClient,
     database: Database,
-    telegram_channel: types.InputPeerChannel
+    telegram_channel: types.InputPeerChannel,
 ) -> None:
     logger = logging.getLogger("sts.update_playlist")
     logger.info("Checking playlist...")
@@ -543,8 +554,8 @@ async def prepare_clients(
         await telegram.start()
         clients["telegram"] = telegram
         logger.debug("Telegram is ready.")
-        clients["telegram_channel"] = (
-            await telegram.get_input_entity(constants.TELEGRAM_CHANNEL)
+        clients["telegram_channel"] = await telegram.get_input_entity(
+            constants.TELEGRAM_CHANNEL
         )
 
     # httpx

@@ -2,9 +2,10 @@ import asyncio
 import logging
 
 import uvicorn
+from fastapi import FastAPI
+
 from bot import prepare_clients, update_playlist
 from constants import PORT
-from fastapi import FastAPI
 
 app = FastAPI()
 logger = logging.getLogger("sts.server")
