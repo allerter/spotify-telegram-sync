@@ -10,16 +10,15 @@ from collections import namedtuple
 from string import punctuation
 from typing import Dict, List, Optional, Union
 
+import constants
 import httpx
 import tekore as tk
+from database import Database
+from get_song_file import DeezLoader, InvalidTokenError
 from telethon import TelegramClient, errors, events, tl, types
 from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
 from telethon.tl.functions.users import GetFullUserRequest
-
-import constants
-from database import Database
-from get_song_file import DeezLoader
 
 log_level = logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO"))
 log_format = "%(name)s - %(levelname)s - %(message)s"
@@ -475,11 +474,19 @@ async def update_playlist(
 
         # download each track and send it to the Telegram channel
         deezer = DeezLoader(constants.DEEZER_ARL_TOKEN)
+
         for track in to_be_added:
             logger.debug("Downloading %s", track[0])
             file = None
             try:
                 file = await deezer.from_spotify(isrc=track[2])
+            except InvalidTokenError as e:
+                msg = (
+                    "Your Deezer ARL token is expired/invalid. "
+                    "Replaced it with a new one."
+                )
+                telegram.send_message("me", msg)
+                raise e
             except Exception as e:
                 logger.error(
                     "Couldn't download track %s. Reason: %s",
@@ -575,7 +582,16 @@ async def prepare_clients(
         cred = tk.RefreshingCredentials(
             constants.SPOTIFY_CLIENT_ID, constants.SPOTIFY_CLIENT_SECRET
         )
-        token = cred.refresh_user_token(constants.SPOTIFY_REFRESH_TOKEN)
+        try:
+            token = cred.refresh_user_token(constants.SPOTIFY_REFRESH_TOKEN)
+        except tk.BadRequest as e:
+            if "invalid_grant" in str(e):
+                msg = (
+                    "Your Spotify refresh token is expired. "
+                    f"Replace it with a new one. Original error message: '{str(e)}'"
+                )
+                telegram.send_message("me", msg)
+                exit(msg)
         spotify = tk.Spotify(token, asynchronous=True)
         clients["spotify"] = spotify
         logger.debug("Spotify is ready.")

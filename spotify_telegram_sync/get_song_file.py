@@ -24,6 +24,10 @@ qualities = {
 valid_id3_tags = list(EasyID3.valid_keys.keys())
 
 
+class InvalidTokenError(Exception):
+    """Exception for invalid/expired tokens"""
+
+
 class Sender:
     """Sends requests to the GeniusT Recommender."""
 
@@ -216,7 +220,10 @@ class DeezLoader:
         return res["results"]
 
     async def _download(self, quality: str, data: Dict[str, str]) -> BytesIO:
-        token = (await self._send_private_request("deezer.getUserData"))["checkForm"]
+        token_data = await self._send_private_request("deezer.getUserData")
+        if token_data["USER"]["USER_ID"] == 0:
+            raise InvalidTokenError("ARL token expired/invalid.")
+        token = token_data["checkForm"]
         ids = data["link"].split("?utm")[0].split("/")[-1]
         output = BytesIO()
         infos = await self._send_private_request("song.getData", token, {"sng_id": ids})
