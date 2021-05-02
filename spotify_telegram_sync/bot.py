@@ -575,7 +575,16 @@ async def prepare_clients(
         cred = tk.RefreshingCredentials(
             constants.SPOTIFY_CLIENT_ID, constants.SPOTIFY_CLIENT_SECRET
         )
-        token = cred.refresh_user_token(constants.SPOTIFY_REFRESH_TOKEN)
+        try:
+            token = cred.refresh_user_token(constants.SPOTIFY_REFRESH_TOKEN)
+        except tk.BadRequest as e:
+            if "invalid_grant" in str(e):
+                msg = (
+                    "Your Spotify refresh token is expired. "
+                    f"Replace it with a new one. Original error message: '{str(e)}'"
+                )
+                telegram.send_message("me", msg)
+                exit(msg)
         spotify = tk.Spotify(token, asynchronous=True)
         clients["spotify"] = spotify
         logger.debug("Spotify is ready.")
