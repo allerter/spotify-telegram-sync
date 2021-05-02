@@ -591,7 +591,7 @@ async def prepare_clients(
                     f"Replace it with a new one. Original error message: '{str(e)}'"
                 )
                 telegram.send_message("me", msg)
-                exit(msg)
+                sys.exit(msg)
         spotify = tk.Spotify(token, asynchronous=True)
         clients["spotify"] = spotify
         logger.debug("Spotify is ready.")
@@ -634,13 +634,13 @@ async def signal_handler(
 ) -> None:
     logger.info(f"Received exit signal {signal.name}...")
     await clean_up()
-    exit(0)
+    sys.exit()
 
 
 async def exception_handler(loop: asyncio.AbstractEventLoop, context: dict) -> None:
     logger.error("Exception raised: %s", context["message"])
     await clean_up()
-    exit(1)
+    sys.exit(1)
 
 
 if __name__ == "__main__":
@@ -698,14 +698,14 @@ if __name__ == "__main__":
             loop.run_forever()
         except KeyboardInterrupt:
             logger.info("KeyboardInterrupt received.")
-            exit(0)
+            sys.exit()
         except Exception as e:
             if isinstance(e, OSError) and e.args[0].startswith("Signal"):
-                exit(0)
+                sys.exit()
             else:
                 tb = sys.exc_info()[2]
                 logger.error("Exception: %s, ", e.with_traceback(tb))
-                exit(1)
+                sys.exit(1)
         finally:
             logger.info("Cleaning up before exiting...")
             loop.run_until_complete(clean_up())
