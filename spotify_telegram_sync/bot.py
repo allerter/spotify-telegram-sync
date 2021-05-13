@@ -504,6 +504,7 @@ async def update_playlist(
             else:
                 msg_id = None
             upload_to_db_tracks.append((track[0], msg_id))
+        await deezer.close()
 
         # add new tracks to database
         await database.add_tracks(upload_to_db_tracks)
