@@ -591,7 +591,7 @@ async def prepare_clients(
                     "Double-check your credentials and replace it with "
                     f"a new one. Original error message: '{str(e)}'"
                 )
-                telegram.send_message("me", msg)
+                await telegram.send_message("me", msg)
                 sys.exit(msg)
         spotify = tk.Spotify(token, asynchronous=True)
         clients["spotify"] = spotify
