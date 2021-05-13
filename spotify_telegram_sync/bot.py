@@ -587,8 +587,9 @@ async def prepare_clients(
         except tk.BadRequest as e:
             if "invalid_grant" in str(e):
                 msg = (
-                    "Your Spotify refresh token is expired. "
-                    f"Replace it with a new one. Original error message: '{str(e)}'"
+                    "Your Spotify refresh token is probably expired. "
+                    "Double-check your credentials and replace it with "
+                    f"a new one. Original error message: '{str(e)}'"
                 )
                 telegram.send_message("me", msg)
                 sys.exit(msg)
