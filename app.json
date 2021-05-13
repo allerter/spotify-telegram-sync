@@ -37,7 +37,7 @@
       "required": true
     },
     "TELEGRAM_CHANNEL": {
-      "description": "The username of your Telegram channel",
+      "description": "The username of your Telegram channel. It can also be the channel ID or an invite link.",
       "required": true
     },
     "DEEZER_ARL_TOKEN": {

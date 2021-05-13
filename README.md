@@ -109,7 +109,7 @@ driver installed. For example if you'll be using Postgres, you should have
     The string session you generated using `string_session.py`
 
 -   **TELEGRAM\_CHANNEL**  
-    The username of your Telegram channel
+    The username of your Telegram channel. It can also be the channel ID or an invite link.
 
 -   **DEEZER\_ARL\_TOKEN** 
     Your Deezer ARL token
