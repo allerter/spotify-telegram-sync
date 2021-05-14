@@ -485,7 +485,7 @@ async def update_playlist(
                     "Your Deezer ARL token is expired/invalid. "
                     "Replaced it with a new one."
                 )
-                telegram.send_message("me", msg)
+                await telegram.send_message("me", msg)
                 raise e
             except Exception as e:
                 logger.error(
