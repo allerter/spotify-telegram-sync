@@ -674,7 +674,7 @@ if __name__ == "__main__":
         logger.info("Update playlist: ✔️ | Update bio: ❌")
         tasks.append(loop.create_task(update_playlist_loop()))
     if constants.CHECK_TELEGRAM:
-        logger.info("Check Telegram: ✔️")
+        logger.info("Check Telegram for added/deleted tracks: ✔️")
         tasks.append(loop.create_task(check_deleted()))
         client.on(events.NewMessage(chats=(telegram_channel)))(new_message_handler)
     else:
