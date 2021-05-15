@@ -485,7 +485,7 @@ async def update_playlist(
                     "Your Deezer ARL token is expired/invalid. "
                     "Replaced it with a new one."
                 )
-                telegram.send_message("me", msg)
+                await telegram.send_message("me", msg)
                 raise e
             except Exception as e:
                 logger.error(
@@ -504,6 +504,7 @@ async def update_playlist(
             else:
                 msg_id = None
             upload_to_db_tracks.append((track[0], msg_id))
+        await deezer.close()
 
         # add new tracks to database
         await database.add_tracks(upload_to_db_tracks)
@@ -587,11 +588,12 @@ async def prepare_clients(
         except tk.BadRequest as e:
             if "invalid_grant" in str(e):
                 msg = (
-                    "Your Spotify refresh token is expired. "
-                    f"Replace it with a new one. Original error message: '{str(e)}'"
+                    "Your Spotify refresh token is either expired or invalid. "
+                    f"Original error message: '{str(e)}'"
                 )
-                telegram.send_message("me", msg)
+                await telegram.send_message("me", msg)
                 sys.exit(msg)
+            raise e
         spotify = tk.Spotify(token, asynchronous=True)
         clients["spotify"] = spotify
         logger.debug("Spotify is ready.")
@@ -672,7 +674,7 @@ if __name__ == "__main__":
         logger.info("Update playlist: ✔️ | Update bio: ❌")
         tasks.append(loop.create_task(update_playlist_loop()))
     if constants.CHECK_TELEGRAM:
-        logger.info("Check Telegram: ✔️")
+        logger.info("Check Telegram for added/deleted tracks: ✔️")
         tasks.append(loop.create_task(check_deleted()))
         client.on(events.NewMessage(chats=(telegram_channel)))(new_message_handler)
     else:

@@ -47,10 +47,12 @@ Before continuing, install the packages in the
     pip install -r requirements.txt
 
 Now run `spotify_refresh_token.py` in the `setup` folder get your
-refresh token. The script will ask for your Spotify app ID, app secret, and
-then the link of the webpage after you click *Agree* (the link will be
-someting like `https://example.com/callback?code=...`) You can run the script
-from the command line:
+refresh token. The script will ask for your Spotify app ID, app secret.
+After your browser opens up and you click *Agree*, you will be redirected
+to your redirected (the link will be
+something like `https://example.com/callback?code=...`). Copy the full URL and
+paste it in the console. Then the script will print out your refresh token.
+You can run the script from the command line:
 
     python spotify_refresh_token.py
 
@@ -109,7 +111,7 @@ driver installed. For example if you'll be using Postgres, you should have
     The string session you generated using `string_session.py`
 
 -   **TELEGRAM\_CHANNEL**  
-    The username of your Telegram channel
+    The username of your Telegram channel. It can also be the channel ID or an invite link.
 
 -   **DEEZER\_ARL\_TOKEN** 
     Your Deezer ARL token
